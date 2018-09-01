@@ -1,4 +1,4 @@
-// The enc_map package aims to provide library and interface functionality for
+// Package maps aims to provide library and interface functionality for
 // the conversion of `struct`s to `map[string]interface{}`s, and vice-versa.
 //
 // This package is primarily inspired by the encode/json and database/sql
@@ -7,7 +7,7 @@
 // Note that this package relies _heavily_ on the reflect package and, as such,
 // has severely weakened compile-time type-safety. Be sure to keep an eye on
 // your error returns.
-package encmap
+package maps
 
 import (
 	"errors"

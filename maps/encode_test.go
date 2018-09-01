@@ -1,9 +1,9 @@
-package encmap_test
+package maps_test
 
 import (
 	"testing"
 
-	"github.com/pyrrho/encoding/map"
+	"github.com/pyrrho/encoding/maps"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,7 +34,7 @@ func TestSimpleUntaggedStruct(t *testing.T) {
 		"FieldThree": "Hello World",
 		"FieldFour":  complex(1, 2),
 	}
-	actual, err = encmap.Marshal(a)
+	actual, err = maps.Marshal(a)
 
 	require.NoError(err)
 	require.Equal(expected, actual)
@@ -60,7 +60,7 @@ func TestSimpleTaggedStruct(t *testing.T) {
 		"FieldOne":   42,
 		"field_four": complex(1, 2),
 	}
-	actual, err := encmap.Marshal(a)
+	actual, err := maps.Marshal(a)
 
 	require.NoError(err)
 	require.Equal(expected, actual)
@@ -96,7 +96,7 @@ func TestNestedStructsAndMaps(t *testing.T) {
 			"B": 6,
 		},
 	}
-	actual, err := encmap.Marshal(a)
+	actual, err := maps.Marshal(a)
 
 	require.NoError(err)
 	require.Equal(expected, actual)
@@ -131,7 +131,7 @@ func TestSimpleEmbeddedStructs(t *testing.T) {
 		"A":        42,
 		"Exported": 2,
 	}
-	actual, err := encmap.Marshal(a)
+	actual, err := maps.Marshal(a)
 
 	require.NoError(err)
 	require.Equal(expected, actual)
@@ -189,7 +189,7 @@ func TestContendingEmbeddedStructs(t *testing.T) {
 		"AString": "foo", // From J
 		"AFloat":  3.14,  // From J
 	}
-	actual, err := encmap.Marshal(a)
+	actual, err := maps.Marshal(a)
 
 	require.NoError(err)
 	require.Equal(expected, actual)

@@ -1,4 +1,4 @@
-package encmap
+package maps
 
 // This code was taken directly from the encoding/json package. As such, all
 // credit and copyrights remain with the Go Authors, and the below code remains

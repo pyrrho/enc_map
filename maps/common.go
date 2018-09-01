@@ -1,4 +1,4 @@
-package encmap
+package maps
 
 import (
 	"fmt"
