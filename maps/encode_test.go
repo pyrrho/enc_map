@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type A struct {
+type SimpleStruct struct {
 	FieldOne   int
 	FieldTwo   float64
 	FieldThree string
@@ -22,7 +22,7 @@ func TestSimpleUntaggedStruct(t *testing.T) {
 		actual, expected map[string]interface{}
 	)
 
-	a := A{
+	s := SimpleStruct{
 		42,
 		3.14,
 		"Hello World",
@@ -34,57 +34,59 @@ func TestSimpleUntaggedStruct(t *testing.T) {
 		"FieldThree": "Hello World",
 		"FieldFour":  complex(1, 2),
 	}
-	actual, err = maps.Marshal(a)
+	actual, err = maps.Marshal(s)
 
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
 
-type B struct {
-	FieldOne   int        ``                 // undecorated
-	fieldTwo   float64    ``                 // unexported
-	FieldThree string     `map:"-"`          // explicitly ignored
-	FieldFour  complex128 `map:"field_four"` // explicitly named
+type SimpleStructWithTags struct {
+	FieldOne   int        ``                  // undecorated
+	FieldTwo   float64    `map:"-"`           // explicitly ignored
+	FieldThree string     `map:"field_three"` // explicitly named
+	fieldFour  complex128 `map:"field_four"`  // unexported with name (ignored)
+	fieldFive  bool       ``                  // unexported sans name
 }
 
 func TestSimpleTaggedStruct(t *testing.T) {
 	require := require.New(t)
 
-	a := B{
+	s := SimpleStructWithTags{
 		42,
 		3.14,
 		"Hello World",
 		complex(1, 2),
+		true,
 	}
 	expected := map[string]interface{}{
-		"FieldOne":   42,
-		"field_four": complex(1, 2),
+		"FieldOne":    42,
+		"field_three": "Hello World",
 	}
-	actual, err := maps.Marshal(a)
+	actual, err := maps.Marshal(s)
 
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
 
-type C struct {
+type ParentStruct struct {
 	AMap    map[int]int
-	AStruct D
+	AStruct NestedStruct
 }
 
-type D struct {
-	A int
-	B int
+type NestedStruct struct {
+	AnInt  int
+	AFloat float64
 }
 
 func TestNestedStructsAndMaps(t *testing.T) {
 	require := require.New(t)
 
-	a := C{
+	s := ParentStruct{
 		map[int]int{
 			1: 2,
 			3: 4,
 		},
-		D{5, 6},
+		NestedStruct{5, 6.7},
 	}
 	expected := map[string]interface{}{
 		"AMap": map[int]int{
@@ -92,30 +94,30 @@ func TestNestedStructsAndMaps(t *testing.T) {
 			3: 4,
 		},
 		"AStruct": map[string]interface{}{
-			"A": 5,
-			"B": 6,
+			"AnInt":  5,
+			"AFloat": 6.7,
 		},
 	}
-	actual, err := maps.Marshal(a)
+	actual, err := maps.Marshal(s)
 
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
 
-type E struct {
-	A int
-	F // embedded
+type TopLevelStruct struct {
+	AnInt  int
+	WeMust // embedded
 }
 
-type F struct {
-	G // embedded
+type WeMust struct {
+	Go // embedded
 }
 
-type G struct {
-	H // embedded
+type Go struct {
+	Deeper // embedded
 }
 
-type H struct {
+type Deeper struct {
 	unexported int
 	Exported   int
 }
@@ -123,73 +125,74 @@ type H struct {
 func TestSimpleEmbeddedStructs(t *testing.T) {
 	require := require.New(t)
 
-	a := E{
+	s := TopLevelStruct{
 		42,
-		F{G{H{1, 2}}},
+		WeMust{Go{Deeper{1, 2}}},
 	}
 	expected := map[string]interface{}{
-		"A":        42,
+		"AnInt":    42,
 		"Exported": 2,
 	}
-	actual, err := maps.Marshal(a)
+	actual, err := maps.Marshal(s)
 
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
 
-type I struct {
-	J // embedded, with contentious field names
-	K // embedded, with contentious field names
+type LevelOne struct {
+	LevelTwoLeft  // embedded, with contentious field names
+	LevelTwoRight // embedded, with contentious field names
 }
 
-type J struct {
-	AInt    int
+type LevelTwoLeft struct {
+	AnInt   int
 	AString string
 	AFloat  float64
 }
 
-type K struct {
-	// Accessing `I.AInt` would cause an ambiguous selector compiler error, but
-	// `map` tag means there won't be contention when marshalling.
-	AInt int `map:"AInt"`
-	// embedded
-	L
+type LevelTwoRight struct {
+	// Accessing `LevelOne.AnInt` would cause an ambiguous selector compiler
+	// error, but `map` tag means there won't be contention when marshalling.
+	AnInt int `map:"AnInt"`
+
+	LevelThree // embedded
 }
 
-type L struct {
-	// `L.AString` will be shadowed by `J.AString`.
+type LevelThree struct {
+	// `LevelThree.AString` will be shadowed by `LevelTwoLeft.AString`.
 	AString string
-	// `L.AFloat` will be shadowed by `J.AFloat`, despite the `map` tag.
-	AFloat float64
+	// `LevelThree.AFloat` will be shadowed by `LevelTwoLeft.AFloat`, despite
+	// the `map` tag.
+	AFloat float64 `map:"AFloat"`
 }
 
 func TestContendingEmbeddedStructs(t *testing.T) {
 	require := require.New(t)
 
-	a := I{
-		J{
+	s := LevelOne{
+		LevelTwoLeft{
 			100,
 			"foo",
 			3.14,
 		},
-		K{
+		LevelTwoRight{
 			200,
-			L{
+			LevelThree{
 				"bar",
 				6.28,
 			},
 		},
 	}
-	require.Equal("foo", a.AString)
-	require.Equal(3.14, a.AFloat)
+	require.Equal("foo", s.AString)
+	require.Equal(3.14, s.AFloat)
 	// Compile-time error
-	// require.Equal(0, a.AInt)
+	// require.Equal(0, s.AnInt)
 	expected := map[string]interface{}{
-		"AInt":    200,   // From K
-		"AString": "foo", // From J
-		"AFloat":  3.14,  // From J
+		"AnInt":   200,   // From LevelTwoRight
+		"AString": "foo", // From LevelTwoLeft
+		"AFloat":  3.14,  // From LevelTwoLeft
 	}
-	actual, err := maps.Marshal(a)
+	actual, err := maps.Marshal(s)
 
 	require.NoError(err)
 	require.Equal(expected, actual)
