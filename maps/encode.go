@@ -18,7 +18,14 @@ import (
 )
 
 func Marshal(src interface{}) (map[string]interface{}, error) {
-	cfg := &Config{TagName: DefaultTagName}
+	ret, err := defaultConfig.marshal(src)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+func MarshalWithConfig(src interface{}, cfg *Config) (map[string]interface{}, error) {
 	ret, err := cfg.marshal(src)
 	if err != nil {
 		return nil, err
@@ -58,21 +65,27 @@ func (cfg *Config) marshal(src interface{}) (m map[string]interface{}, err error
 		}
 	}()
 
-	ret := lookupEncodeFn(srcv.Type())(srcv, cfg)
+	ret := lookupEncodeFn(srcv.Type(), cfg)(srcv, cfg)
 	return ret.(map[string]interface{}), nil
 }
 
-type encodeValueFn func(src reflect.Value, cfg *Config) interface{}
+type encodeFn func(src reflect.Value, cfg *Config) interface{}
 
-// `encodeValueFnCache` is based on encode/json's encoderCache. It stores the
-// given type's encodeValueFn s.t. the construction of new encodeValueFn
-// wrappers need only happen once.
-var encodeValueFnCache sync.Map // map[reflect.Type]encodeValueFn
+type encoderFnCacheKey struct {
+	t reflect.Type
+	c Config
+}
 
-func lookupEncodeFn(t reflect.Type) encodeValueFn {
+// `encodeFnCache` is based on encode/json's encoderCache. It stores the given
+// type's encodeFn s.t. the construction of new encodeFn wrappers need only
+// happen once.
+var encodeFnCache sync.Map // map[encoderFnCacheKey]encodeFn
+
+func lookupEncodeFn(t reflect.Type, cfg *Config) encodeFn {
+	key := encoderFnCacheKey{t, *cfg}
 	// Early-out on quick cache-hits.
-	if fn, ok := encodeValueFnCache.Load(t); ok {
-		return fn.(encodeValueFn)
+	if fn, ok := encodeFnCache.Load(key); ok {
+		return fn.(encodeFn)
 	}
 
 	// From encoding/json/encode.go@typeEncoder, modified;
@@ -82,32 +95,31 @@ func lookupEncodeFn(t reflect.Type) encodeValueFn {
 	// > only used for recursive types.
 	var (
 		wg sync.WaitGroup
-		fn encodeValueFn
+		fn encodeFn
 	)
 	wg.Add(1)
-	fi, loaded := encodeValueFnCache.LoadOrStore(
-		t,
-		encodeValueFn(
-			func(src reflect.Value, cfg *Config) interface{} {
-				wg.Wait()
-				return fn(src, cfg)
-			}),
+	fi, loaded := encodeFnCache.LoadOrStore(
+		key,
+		encodeFn(func(src reflect.Value, cfg *Config) interface{} {
+			wg.Wait()
+			return fn(src, cfg)
+		}),
 	)
 	if loaded {
-		// This is *not* a new type and the correct encodeValueFn has already
+		// This is *not* a new type and the correct encodeFn has already
 		// been stored; return that.
-		return fi.(encodeValueFn)
+		return fi.(encodeFn)
 	}
 
-	// This type does not have a correct encodeValueFn loaded into the cache;
+	// This type does not have a correct encodeFn loaded into the cache;
 	// find/construct the correct encoder and replace the indirect fn.
-	fn = newEncodeValueFn(t, true)
+	fn = newEncodeValueFn(t, cfg, true)
 	wg.Done()
-	encodeValueFnCache.Store(t, fn)
+	encodeFnCache.Store(key, fn)
 	return fn
 }
 
-func newEncodeValueFn(t reflect.Type, firstPass bool) encodeValueFn {
+func newEncodeValueFn(t reflect.Type, cfg *Config, firstPass bool) encodeFn {
 	if t.Implements(marshalerType) {
 		return encodeMarshaller
 	}
@@ -117,12 +129,12 @@ func newEncodeValueFn(t reflect.Type, firstPass bool) encodeValueFn {
 				return src.CanAddr()
 			},
 			encodeAddrMarshaller,
-			newEncodeValueFn(t, false),
+			newEncodeValueFn(t, cfg, false),
 		)
 	}
 	switch t.Kind() {
 	case reflect.Struct:
-		return newStructEncoder(t)
+		return newStructEncoder(t, cfg)
 	default:
 		// We assume that if the type is non-nilable, and not a struct, we can
 		// just return an enclosing interface{}, and call it good.
@@ -170,8 +182,8 @@ func encodeAddrMarshaller(src reflect.Value, cfg *Config) interface{} {
 
 type condEncoder struct {
 	cond func(src reflect.Value) bool
-	tru  encodeValueFn
-	fls  encodeValueFn
+	tru  encodeFn
+	fls  encodeFn
 }
 
 func (cm *condEncoder) marshalValue(src reflect.Value, cfg *Config) interface{} {
@@ -181,7 +193,7 @@ func (cm *condEncoder) marshalValue(src reflect.Value, cfg *Config) interface{} 
 	return cm.fls(src, cfg)
 }
 
-func newConditionalEncoder(cond func(src reflect.Value) bool, tru encodeValueFn, fls encodeValueFn) encodeValueFn {
+func newConditionalEncoder(cond func(src reflect.Value) bool, tru encodeFn, fls encodeFn) encodeFn {
 	cm := &condEncoder{cond, tru, fls}
 	return cm.marshalValue
 }
@@ -211,7 +223,7 @@ func typeByIndex(t reflect.Type, index []int) reflect.Type {
 
 type structEncoder struct {
 	fields    []field
-	fieldEncs []encodeValueFn
+	fieldEncs []encodeFn
 }
 
 func (se *structEncoder) encode(src reflect.Value, cfg *Config) interface{} {
@@ -229,14 +241,14 @@ func (se *structEncoder) encode(src reflect.Value, cfg *Config) interface{} {
 	return ret
 }
 
-func newStructEncoder(t reflect.Type) encodeValueFn {
-	fields := cachedTypeFields(t)
+func newStructEncoder(t reflect.Type, cfg *Config) encodeFn {
+	fields := cachedTypeFields(t, cfg)
 	se := structEncoder{
 		fields:    fields,
-		fieldEncs: make([]encodeValueFn, len(fields)),
+		fieldEncs: make([]encodeFn, len(fields)),
 	}
 	for i, f := range fields {
-		se.fieldEncs[i] = lookupEncodeFn(typeByIndex(t, f.index))
+		se.fieldEncs[i] = lookupEncodeFn(typeByIndex(t, f.index), cfg)
 	}
 	return se.encode
 }

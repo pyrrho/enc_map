@@ -12,9 +12,9 @@ type Config struct {
 	TagName string
 }
 
-var (
-	DefaultTagName string = "map"
-)
+var defaultConfig = &Config{
+	TagName: "map",
+}
 
 // The below code is a lightly editied version of code written by the Go Authors
 // for the encoding/json package. As such, it remains under the BSD-style
@@ -72,7 +72,7 @@ var fieldCache struct {
 }
 
 // cachedTypeFields caches the return of typeFields to avoid repeated work.
-func cachedTypeFields(t reflect.Type) []field {
+func cachedTypeFields(t reflect.Type, cfg *Config) []field {
 	m, _ := fieldCache.value.Load().(map[reflect.Type][]field)
 	f := m[t]
 	if f != nil {
@@ -81,7 +81,7 @@ func cachedTypeFields(t reflect.Type) []field {
 
 	// Compute fields without lock.
 	// Might duplicate effort but won't hold other computations back.
-	f = typeFields(t)
+	f = typeFields(t, cfg)
 	if f == nil {
 		f = []field{}
 	}
@@ -101,7 +101,7 @@ func cachedTypeFields(t reflect.Type) []field {
 // typeFields returns a list of fields that should be recognized for the given
 // type. The algorithm is breadth-first search over the set of structs to
 // include - the top struct and then any reachable anonymous structs.
-func typeFields(t reflect.Type) []field {
+func typeFields(t reflect.Type, cfg *Config) []field {
 	// Anonymous fields to explore at the current level and the next.
 	current := []field{}
 	next := []field{{typ: t}}
@@ -148,12 +148,12 @@ func typeFields(t reflect.Type) []field {
 					continue
 				}
 
-				tag := sf.Tag.Get("map")
-				if tag == "-" {
-					continue
-				}
+				tag := sf.Tag.Get(cfg.TagName)
 				// name, opts := parseTag(tag)
 				name, _ := parseTag(tag)
+				if name == "-" {
+					continue
+				}
 				// TODO: Consider adding a check to ensure `name` is a valid key
 				tagged := name != ""
 				if name == "" {

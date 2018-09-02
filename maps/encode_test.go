@@ -239,3 +239,36 @@ func TestMarshalerInterface(t *testing.T) {
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
+
+type DifferentTags struct {
+	FieldOne   int        `map_key:"field_one"`
+	FieldTwo   float64    `map_key:"field_two"`
+	FieldThree string     `map_key:"field_three"`
+	FieldFour  complex128 `map_key:"field_four"`
+}
+
+func TestDifferentTags(t *testing.T) {
+	require := require.New(t)
+
+	var (
+		err              error
+		actual, expected map[string]interface{}
+	)
+
+	s := &DifferentTags{
+		42,
+		3.14,
+		"Hello World",
+		complex(1, 2),
+	}
+	expected = map[string]interface{}{
+		"field_one":   42,
+		"field_two":   float64(3.14),
+		"field_three": "Hello World",
+		"field_four":  complex(1, 2),
+	}
+	actual, err = maps.MarshalWithConfig(s, &maps.Config{TagName: "map_key"})
+
+	require.NoError(err)
+	require.Equal(expected, actual)
+}
