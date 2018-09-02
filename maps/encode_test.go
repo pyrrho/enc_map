@@ -272,3 +272,91 @@ func TestDifferentTags(t *testing.T) {
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
+
+type PossiblyNilValues struct {
+	AnIntPtr  *int     `map:",omitempty"`
+	AFloatPtr *float64 `map:",OmItEmPTy"`
+}
+
+func TestOmitEmpty(t *testing.T) {
+	require := require.New(t)
+
+	var (
+		err              error
+		actual, expected map[string]interface{}
+		i                int     = 42
+		f                float64 = 3.14
+	)
+
+	s1 := &PossiblyNilValues{
+		AnIntPtr: &i,
+	}
+	s2 := &PossiblyNilValues{
+		AFloatPtr: &f,
+	}
+	expected = map[string]interface{}{
+		"AnIntPtr": &i,
+	}
+	actual, err = maps.Marshal(s1)
+	require.NoError(err)
+	require.Equal(expected, actual)
+
+	expected = map[string]interface{}{
+		"AFloatPtr": &f,
+	}
+	actual, err = maps.Marshal(s2)
+	require.NoError(err)
+	require.Equal(expected, actual)
+}
+
+type AsValueParent struct {
+	Tagged     TaggedAsValueChild `map:",value"`
+	Interfaced MarshalerAsValueChild
+}
+
+type TaggedAsValueChild struct {
+	AFloat float64
+	ABool  bool
+}
+type MarshalerAsValueChild struct {
+	AnInt   int
+	AString string
+}
+
+func (m *MarshalerAsValueChild) MarshalMapValue() (interface{}, error) {
+	return *m, nil
+}
+
+func TestStructsAsValue(t *testing.T) {
+	require := require.New(t)
+
+	var (
+		err              error
+		actual, expected map[string]interface{}
+	)
+
+	s := &AsValueParent{
+		TaggedAsValueChild{
+			3.14,
+			true,
+		},
+		MarshalerAsValueChild{
+			42,
+			"Hello World",
+		},
+	}
+	expected = map[string]interface{}{
+		"Tagged": TaggedAsValueChild{
+			3.14,
+			true,
+		},
+		"Interfaced": MarshalerAsValueChild{
+			42,
+			"Hello World",
+		},
+	}
+	actual, err = maps.Marshal(s)
+
+	require.NoError(err)
+	require.Equal(expected, actual)
+}

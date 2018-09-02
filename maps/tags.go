@@ -1,49 +1,38 @@
 package maps
 
-// This code was taken directly from the encoding/json package. As such, all
-// credit and copyrights remain with the Go Authors, and the below code remains
-// under the BSD-style license it was originally copywritten under.
-// https://golang.org/LICENSE
-
-// Copyright 2011 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 import (
 	"strings"
 )
 
-// tagOptions is the string following a comma in a struct field's "json"
-// tag, or the empty string. It does not include the leading comma.
-type tagOptions string
+type tagOptions map[string]string
 
-// parseTag splits a struct field's json tag into its name and
-// comma-separated options.
 func parseTag(tag string) (string, tagOptions) {
-	if idx := strings.Index(tag, ","); idx != -1 {
-		return tag[:idx], tagOptions(tag[idx+1:])
+	strs := strings.Split(tag, ",")
+	name := strs[0]
+
+	opts := make(tagOptions, len(strs)-1)
+	for _, str := range strs[1:] {
+		idx := strings.Index(str, "=")
+		if idx < 0 {
+			opts[strings.ToLower(str)] = ""
+		} else {
+			opts[strings.ToLower(str[:idx])] = str[idx+1:]
+		}
 	}
-	return tag, tagOptions("")
+	return name, opts
 }
 
-// Contains reports whether a comma-separated list of options
-// contains a particular substr flag. substr must be surrounded by a
-// string boundary or commas.
-func (o tagOptions) Contains(optionName string) bool {
-	if len(o) == 0 {
-		return false
+func (opts tagOptions) Contain(option string) bool {
+	_, ok := opts[option]
+	return ok
+}
+
+func (opts tagOptions) ValueOf(option string) string {
+	val, ok := opts[option]
+	if !ok {
+		return ""
+	} else if val == "" {
+		return option
 	}
-	s := string(o)
-	for s != "" {
-		var next string
-		i := strings.Index(s, ",")
-		if i >= 0 {
-			s, next = s[:i], s[i+1:]
-		}
-		if s == optionName {
-			return true
-		}
-		s = next
-	}
-	return false
+	return val
 }

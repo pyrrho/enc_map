@@ -9,11 +9,13 @@ import (
 )
 
 type Config struct {
-	TagName string
+	TagName   string
+	OmitEmpty bool
 }
 
 var defaultConfig = &Config{
-	TagName: "map",
+	TagName:   "map",
+	OmitEmpty: false,
 }
 
 // The below code is a lightly editied version of code written by the Go Authors
@@ -33,6 +35,9 @@ type field struct {
 	tagged bool
 	index  []int
 	typ    reflect.Type
+
+	omitEmpty bool
+	asValue   bool
 }
 
 func fillField(f field) field {
@@ -149,15 +154,24 @@ func typeFields(t reflect.Type, cfg *Config) []field {
 				}
 
 				tag := sf.Tag.Get(cfg.TagName)
-				// name, opts := parseTag(tag)
-				name, _ := parseTag(tag)
+				tagged := tag != ""
+				name, opts := parseTag(tag)
 				if name == "-" {
 					continue
 				}
 				// TODO: Consider adding a check to ensure `name` is a valid key
-				tagged := name != ""
 				if name == "" {
 					name = sf.Name
+				}
+				omitEmpty := cfg.OmitEmpty
+				if opts.Contain("omitempty") {
+					omitEmpty = true
+				} else if opts.Contain("noomitempty") {
+					omitEmpty = false
+				}
+				asValue := false
+				if opts.Contain("value") {
+					asValue = true
 				}
 
 				index := make([]int, len(f.index)+1)
@@ -174,10 +188,12 @@ func typeFields(t reflect.Type, cfg *Config) []field {
 				// Record the found field and index sequence ...
 				if tagged || !isEmbedded || sft.Kind() != reflect.Struct {
 					fields = append(fields, fillField(field{
-						name:   name,
-						tagged: tagged,
-						index:  index,
-						typ:    sft,
+						name:      name,
+						tagged:    tagged,
+						index:     index,
+						typ:       sft,
+						omitEmpty: omitEmpty,
+						asValue:   asValue,
 					}))
 					if count[f.typ] > 1 {
 						// If there were multiple instances, add a second, so
@@ -288,4 +304,22 @@ func typeFields(t reflect.Type, cfg *Config) []field {
 	sort.Sort(byIndex(fields))
 
 	return fields
+}
+
+func isEmptyValue(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Interface, reflect.Ptr:
+		return v.IsNil()
+	}
+	return false
 }
