@@ -58,7 +58,7 @@ func (cfg *Config) marshal(src interface{}) (m map[string]interface{}, err error
 		}
 	}()
 
-	ret := lookupEncodeFn(reflect.TypeOf(src))(srcv, cfg)
+	ret := lookupEncodeFn(srcv.Type())(srcv, cfg)
 	return ret.(map[string]interface{}), nil
 }
 

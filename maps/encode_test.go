@@ -22,7 +22,7 @@ func TestSimpleUntaggedStruct(t *testing.T) {
 		actual, expected map[string]interface{}
 	)
 
-	s := SimpleStruct{
+	s := &SimpleStruct{
 		42,
 		3.14,
 		"Hello World",
@@ -51,7 +51,7 @@ type SimpleStructWithTags struct {
 func TestSimpleTaggedStruct(t *testing.T) {
 	require := require.New(t)
 
-	s := SimpleStructWithTags{
+	s := &SimpleStructWithTags{
 		42,
 		3.14,
 		"Hello World",
@@ -81,7 +81,7 @@ type NestedStruct struct {
 func TestNestedStructsAndMaps(t *testing.T) {
 	require := require.New(t)
 
-	s := ParentStruct{
+	s := &ParentStruct{
 		map[int]int{
 			1: 2,
 			3: 4,
@@ -125,7 +125,7 @@ type Deeper struct {
 func TestSimpleEmbeddedStructs(t *testing.T) {
 	require := require.New(t)
 
-	s := TopLevelStruct{
+	s := &TopLevelStruct{
 		42,
 		WeMust{Go{Deeper{1, 2}}},
 	}
@@ -169,7 +169,7 @@ type LevelThree struct {
 func TestContendingEmbeddedStructs(t *testing.T) {
 	require := require.New(t)
 
-	s := LevelOne{
+	s := &LevelOne{
 		LevelTwoLeft{
 			100,
 			"foo",
@@ -191,6 +191,48 @@ func TestContendingEmbeddedStructs(t *testing.T) {
 		"AnInt":   200,   // From LevelTwoRight
 		"AString": "foo", // From LevelTwoLeft
 		"AFloat":  3.14,  // From LevelTwoLeft
+	}
+	actual, err := maps.Marshal(s)
+
+	require.NoError(err)
+	require.Equal(expected, actual)
+}
+
+type MarahalerParent struct {
+	AnInt            int
+	AnArrayIshStruct MarshalerImplementor
+}
+
+type MarshalerImplementor struct {
+	AnArray  [3]int
+	Constant int
+}
+
+func (mi *MarshalerImplementor) MarshalMapValue() (interface{}, error) {
+	return map[string]int{
+		"Arr0": mi.AnArray[0] + mi.Constant,
+		"Arr1": mi.AnArray[1] + mi.Constant,
+		"Arr2": mi.AnArray[2] + mi.Constant,
+	}, nil
+}
+
+func TestMarshalerInterface(t *testing.T) {
+	require := require.New(t)
+
+	s := &MarahalerParent{
+		42,
+		MarshalerImplementor{
+			[3]int{1, 2, 3},
+			10,
+		},
+	}
+	expected := map[string]interface{}{
+		"AnInt": 42,
+		"AnArrayIshStruct": map[string]int{
+			"Arr0": 11,
+			"Arr1": 12,
+			"Arr2": 13,
+		},
 	}
 	actual, err := maps.Marshal(s)
 
