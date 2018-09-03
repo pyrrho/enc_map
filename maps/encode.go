@@ -12,7 +12,6 @@ package maps
 import (
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"runtime"
 	"sync"
@@ -228,13 +227,9 @@ type structEncoder struct {
 }
 
 func (se *structEncoder) encode(src reflect.Value, cfg *Config) interface{} {
-	log.Println("Struct Encoding:", src)
 	ret := make(map[string]interface{}, len(se.fields))
 	for i, f := range se.fields {
 		fv := fieldByIndex(src, f.index)
-		log.Println("Looking at field:", f)
-		log.Println("f.omitEmpty:", f.omitEmpty)
-		log.Println("isEmptyValue(fv):", isEmptyValue(fv))
 		if !fv.IsValid() || f.omitEmpty && isEmptyValue(fv) {
 			continue
 		}
