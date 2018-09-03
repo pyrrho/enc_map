@@ -9,13 +9,15 @@ import (
 )
 
 type Config struct {
-	TagName   string
-	OmitEmpty bool
+	TagName  string
+	OmitZero bool
+	OmitNil  bool
 }
 
 var defaultConfig = &Config{
-	TagName:   "map",
-	OmitEmpty: false,
+	TagName:  "map",
+	OmitZero: false,
+	OmitNil:  false,
 }
 
 // The below code is a lightly editied version of code written by the Go Authors
@@ -36,8 +38,9 @@ type field struct {
 	index  []int
 	typ    reflect.Type
 
-	omitEmpty bool
-	asValue   bool
+	omitZero bool
+	omitNil  bool
+	asValue  bool
 }
 
 func fillField(f field) field {
@@ -163,11 +166,17 @@ func typeFields(t reflect.Type, cfg *Config) []field {
 				if name == "" {
 					name = sf.Name
 				}
-				omitEmpty := cfg.OmitEmpty
-				if opts.Contain("omitempty") {
-					omitEmpty = true
-				} else if opts.Contain("noomitempty") {
-					omitEmpty = false
+				omitZero := cfg.OmitZero
+				if opts.Contain("omitZero") {
+					omitZero = true
+				} else if opts.Contain("noOmitZero") {
+					omitZero = false
+				}
+				omitNil := cfg.OmitNil
+				if opts.Contain("omitNil") {
+					omitNil = true
+				} else if opts.Contain("noOmitNil") {
+					omitNil = false
 				}
 				asValue := false
 				if opts.Contain("value") {
@@ -188,12 +197,13 @@ func typeFields(t reflect.Type, cfg *Config) []field {
 				// Record the found field and index sequence ...
 				if tagged || !isEmbedded || sft.Kind() != reflect.Struct {
 					fields = append(fields, fillField(field{
-						name:      name,
-						tagged:    tagged,
-						index:     index,
-						typ:       sft,
-						omitEmpty: omitEmpty,
-						asValue:   asValue,
+						name:     name,
+						tagged:   tagged,
+						index:    index,
+						typ:      sft,
+						omitZero: omitZero,
+						omitNil:  omitNil,
+						asValue:  asValue,
 					}))
 					if count[f.typ] > 1 {
 						// If there were multiple instances, add a second, so
@@ -306,9 +316,37 @@ func typeFields(t reflect.Type, cfg *Config) []field {
 	return fields
 }
 
-func isEmptyValue(v reflect.Value) bool {
+func isNilValue(v reflect.Value) bool {
 	switch v.Kind() {
-	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return v.IsNil()
+	}
+	return false
+}
+
+func isZeroValue(v reflect.Value) bool {
+	switch v.Kind() {
+	// We consider an Array to be of Zero Value when all of its elements are
+	// that type's Zero Value.
+	case reflect.Array:
+		ret := true
+		for i := 0; i < v.Len(); i++ {
+			if !isZeroValue(v.Index(i)) {
+				ret = false
+				break
+			}
+		}
+		return ret
+	case reflect.Struct:
+		ret := true
+		for i := 0; i < v.NumField(); i++ {
+			if !isZeroValue(v.Field(i)) {
+				ret = false
+				break
+			}
+		}
+		return ret
+	case reflect.Map, reflect.Slice, reflect.String:
 		return v.Len() == 0
 	case reflect.Bool:
 		return !v.Bool()
@@ -318,7 +356,9 @@ func isEmptyValue(v reflect.Value) bool {
 		return v.Uint() == 0
 	case reflect.Float32, reflect.Float64:
 		return v.Float() == 0
-	case reflect.Interface, reflect.Ptr:
+	case reflect.Complex64, reflect.Complex128:
+		return v == reflect.Zero(reflect.TypeOf(v)).Interface()
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Ptr:
 		return v.IsNil()
 	}
 	return false

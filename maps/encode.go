@@ -230,7 +230,9 @@ func (se *structEncoder) encode(src reflect.Value, cfg *Config) interface{} {
 	ret := make(map[string]interface{}, len(se.fields))
 	for i, f := range se.fields {
 		fv := fieldByIndex(src, f.index)
-		if !fv.IsValid() || f.omitEmpty && isEmptyValue(fv) {
+		if !fv.IsValid() ||
+			(f.omitZero && isZeroValue(fv)) ||
+			(f.omitNil && isNilValue(fv)) {
 			continue
 		}
 		if !src.CanInterface() {

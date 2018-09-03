@@ -273,38 +273,36 @@ func TestDifferentTags(t *testing.T) {
 	require.Equal(expected, actual)
 }
 
-type PossiblyNilValues struct {
-	AnIntPtr  *int     `map:",omitempty"`
-	AFloatPtr *float64 `map:",OmItEmPTy"`
+type PossiblyNotValues struct {
+	Int1  int  `map:",omitZero"`
+	Int2  int  `map:",omitZero"`
+	Int3  int  `map:",OmItZeRO"`
+	IntP1 *int `map:",omitNil"`
+	IntP2 *int `map:",omitNil"`
+	IntP3 *int `map:",OMiTnIL"`
 }
 
-func TestOmitEmpty(t *testing.T) {
+func TestOmitZeroNil(t *testing.T) {
 	require := require.New(t)
 
 	var (
 		err              error
 		actual, expected map[string]interface{}
-		i                int     = 42
-		f                float64 = 3.14
 	)
 
-	s1 := &PossiblyNilValues{
-		AnIntPtr: &i,
-	}
-	s2 := &PossiblyNilValues{
-		AFloatPtr: &f,
+	i := 42
+	s := &PossiblyNotValues{
+		Int1:  2,
+		Int3:  0,
+		IntP1: &i,
+		IntP3: nil,
 	}
 	expected = map[string]interface{}{
-		"AnIntPtr": &i,
+		"Int1":  2,
+		"IntP1": &i,
 	}
-	actual, err = maps.Marshal(s1)
-	require.NoError(err)
-	require.Equal(expected, actual)
+	actual, err = maps.Marshal(s)
 
-	expected = map[string]interface{}{
-		"AFloatPtr": &f,
-	}
-	actual, err = maps.Marshal(s2)
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
