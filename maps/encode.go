@@ -25,8 +25,24 @@ func Marshal(src interface{}) (map[string]interface{}, error) {
 	return ret, nil
 }
 
+func MarshalSlice(src interface{}) ([]map[string]interface{}, error) {
+	ret, err := defaultConfig.marshalSlice(src)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
 func MarshalWithConfig(src interface{}, cfg *Config) (map[string]interface{}, error) {
 	ret, err := cfg.marshal(src)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+func MarshalSloceWithConfig(src interface{}, cfg *Config) ([]map[string]interface{}, error) {
+	ret, err := cfg.marshalSlice(src)
 	if err != nil {
 		return nil, err
 	}
@@ -67,6 +83,43 @@ func (cfg *Config) marshal(src interface{}) (m map[string]interface{}, err error
 
 	ret := lookupEncodeFn(srcv.Type(), cfg)(srcv, cfg)
 	return ret.(map[string]interface{}), nil
+}
+
+func (cfg *Config) marshalSlice(src interface{}) (ret []map[string]interface{}, err error) {
+	srcv := reflect.ValueOf(src)
+	if srcv.Kind() == reflect.Ptr {
+		srcv = srcv.Elem()
+	}
+	if !(srcv.Kind() == reflect.Array || srcv.Kind() == reflect.Slice) {
+		return nil, errors.New("src must be a slice, array, or pointer to either")
+	}
+
+	// Any panics after this point should be converted to errors, and returned
+	// normally. Unless it's a runtime error, it's a raw string, or it's not of
+	// type `error`. In which case, do panic.
+	defer func() {
+		if r := recover(); r != nil {
+			if _, ok := r.(runtime.Error); ok {
+				panic(r)
+			} else if s, ok := r.(string); ok {
+				panic(s)
+			} else if e, ok := r.(error); !ok {
+				panic(r)
+			} else {
+				err = e
+			}
+		}
+	}()
+
+	ret = make([]map[string]interface{}, srcv.Len())
+	for i := 0; i < srcv.Len(); i++ {
+		elemv := srcv.Index(i)
+		if elemv.Kind() == reflect.Ptr || elemv.Kind() == reflect.Interface {
+			elemv = elemv.Elem()
+		}
+		ret[i] = (lookupEncodeFn(elemv.Type(), cfg)(elemv, cfg)).(map[string]interface{})
+	}
+	return ret, nil
 }
 
 type encodeFn func(src reflect.Value, cfg *Config) interface{}

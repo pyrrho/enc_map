@@ -22,22 +22,134 @@ func TestSimpleUntaggedStruct(t *testing.T) {
 		actual, expected map[string]interface{}
 	)
 
-	s := &SimpleStruct{
+	s := SimpleStruct{
 		42,
 		3.14,
 		"Hello World",
 		complex(1, 2),
 	}
+	sp := &s
+	var si interface{} = s
 	expected = map[string]interface{}{
 		"FieldOne":   42,
 		"FieldTwo":   float64(3.14),
 		"FieldThree": "Hello World",
 		"FieldFour":  complex(1, 2),
 	}
-	actual, err = maps.Marshal(s)
 
+	actual, err = maps.Marshal(s)
 	require.NoError(err)
 	require.Equal(expected, actual)
+
+	actual, err = maps.Marshal(sp)
+	require.NoError(err)
+	require.Equal(expected, actual)
+
+	actual, err = maps.Marshal(si)
+	require.NoError(err)
+	require.Equal(expected, actual)
+}
+
+func TestSimpleUntaggedStructSlice(t *testing.T) {
+	require := require.New(t)
+
+	var (
+		err              error
+		actual, expected []map[string]interface{}
+	)
+
+	s := []SimpleStruct{
+		{
+			42,
+			3.14,
+			"Hello World",
+			complex(1, 2),
+		},
+		{
+			2,
+			6.28,
+			"Goodby World",
+			complex(2, 1),
+		},
+	}
+	sp := &s
+	si := []interface{}{
+		s[0],
+		s[1],
+	}
+	expected = []map[string]interface{}{
+		{
+			"FieldOne":   42,
+			"FieldTwo":   float64(3.14),
+			"FieldThree": "Hello World",
+			"FieldFour":  complex(1, 2),
+		},
+		{
+			"FieldOne":   2,
+			"FieldTwo":   6.28,
+			"FieldThree": "Goodby World",
+			"FieldFour":  complex(2, 1),
+		},
+	}
+
+	actual, err = maps.MarshalSlice(s)
+	require.NoError(err)
+	require.Equal(expected, actual)
+
+	actual, err = maps.MarshalSlice(sp)
+	require.NoError(err)
+	require.Equal(expected, actual)
+
+	actual, err = maps.MarshalSlice(si)
+	require.NoError(err)
+	require.Equal(expected, actual)
+}
+
+type SimpleStructWithInterface struct {
+	FieldOne int
+	FieldTwo interface{}
+}
+
+func TestSimpleStructWithInterfaceMember(t *testing.T) {
+	require := require.New(t)
+
+	var (
+		err                        error
+		actual, expected           map[string]interface{}
+		actualSlice, expectedSlice []map[string]interface{}
+	)
+
+	s := &SimpleStructWithInterface{
+		42,
+		"I'm an interface{}",
+	}
+	expected = map[string]interface{}{
+		"FieldOne": 42,
+		"FieldTwo": "I'm an interface{}",
+	}
+
+	actual, err = maps.Marshal(s)
+	require.NoError(err)
+	require.Equal(expected, actual)
+
+	ss := []SimpleStructWithInterface{
+		{1, "One"},
+		{2, "Two"},
+	}
+	expectedSlice = []map[string]interface{}{
+		{
+			"FieldOne": 1,
+			"FieldTwo": "One",
+		},
+		{
+			"FieldOne": 2,
+			"FieldTwo": "Two",
+		},
+	}
+
+	actualSlice, err = maps.MarshalSlice(ss)
+	require.NoError(err)
+	require.Equal(expectedSlice, actualSlice)
 }
 
 type SimpleStructWithTags struct {
@@ -98,8 +210,8 @@ func TestNestedStructsAndMaps(t *testing.T) {
 			"AFloat": 6.7,
 		},
 	}
-	actual, err := maps.Marshal(s)
 
+	actual, err := maps.Marshal(s)
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
@@ -133,8 +245,8 @@ func TestSimpleEmbeddedStructs(t *testing.T) {
 		"AnInt":    42,
 		"Exported": 2,
 	}
-	actual, err := maps.Marshal(s)
 
+	actual, err := maps.Marshal(s)
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
@@ -192,8 +304,8 @@ func TestContendingEmbeddedStructs(t *testing.T) {
 		"AString": "foo", // From LevelTwoLeft
 		"AFloat":  3.14,  // From LevelTwoLeft
 	}
-	actual, err := maps.Marshal(s)
 
+	actual, err := maps.Marshal(s)
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
@@ -234,8 +346,8 @@ func TestMarshalerInterface(t *testing.T) {
 			"Arr2": 13,
 		},
 	}
-	actual, err := maps.Marshal(s)
 
+	actual, err := maps.Marshal(s)
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
@@ -267,8 +379,8 @@ func TestDifferentTags(t *testing.T) {
 		"field_three": "Hello World",
 		"field_four":  complex(1, 2),
 	}
-	actual, err = maps.MarshalWithConfig(s, &maps.Config{TagName: "map_key"})
 
+	actual, err = maps.MarshalWithConfig(s, &maps.Config{TagName: "map_key"})
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
@@ -301,8 +413,8 @@ func TestOmitZeroNil(t *testing.T) {
 		"Int1":  2,
 		"IntP1": &i,
 	}
-	actual, err = maps.Marshal(s)
 
+	actual, err = maps.Marshal(s)
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
@@ -353,8 +465,8 @@ func TestStructsAsValue(t *testing.T) {
 			"Hello World",
 		},
 	}
-	actual, err = maps.Marshal(s)
 
+	actual, err = maps.Marshal(s)
 	require.NoError(err)
 	require.Equal(expected, actual)
 }
