@@ -15,6 +15,8 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
+
+	"github.com/pyrrho/encoding"
 )
 
 func Marshal(src interface{}) (map[string]interface{}, error) {
@@ -284,8 +286,8 @@ func (se *structEncoder) encode(src reflect.Value, cfg *Config) interface{} {
 	for i, f := range se.fields {
 		fv := fieldByIndex(src, f.index)
 		if !fv.IsValid() ||
-			(f.omitZero && isZeroValue(fv)) ||
-			(f.omitNil && isNilValue(fv)) {
+			(f.omitZero && encoding.IsValueZero(fv)) ||
+			(f.omitNil && encoding.IsValueNil(fv)) {
 			continue
 		}
 		if !src.CanInterface() {
