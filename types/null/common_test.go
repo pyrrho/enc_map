@@ -1,6 +1,7 @@
 package null_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -81,7 +82,7 @@ func fatalUnless(t *testing.T, err error, fileLine string) {
 }
 
 func assertJSONEquals(t *testing.T, actual []byte, expected string, fileLine string) {
-	if string(actual) != expected {
+	if !bytes.Equal(actual, []byte(expected)) {
 		t.Fatalf("%s: %s ≠ %s", fileLine, actual, expected)
 	}
 }
