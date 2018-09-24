@@ -120,38 +120,6 @@ func (f NullFloat64) IsZero() bool {
 	return !f.Valid || f.Float64 == 0.0
 }
 
-// MarshalText implements the encoding TextMarshaler interface. It will encode
-// this NullFloat64 into its textual representation if valid, or an empty string
-// otherwise.
-func (f NullFloat64) MarshalText() ([]byte, error) {
-	if !f.Valid {
-		return []byte{}, nil
-	}
-	return []byte(strconv.FormatFloat(f.Float64, 'f', -1, 64)), nil
-}
-
-// UnmarshalText implements the encoding TextUnmarshaler interface. It will
-// decode a given []byte into this NullFloat64, so long as the provided string
-// is a valid textual representation of a float or a null. Empty strings and
-// "null" will decode into a null NullFloat64.
-//
-// If the decode fails, the value of this NullFloat64 will be unchanged.
-func (f *NullFloat64) UnmarshalText(text []byte) error {
-	str := string(text)
-	if str == "" || str == "null" {
-		f.Float64 = 0
-		f.Valid = false
-		return nil
-	}
-	tmp, err := strconv.ParseFloat(string(text), 64)
-	if err != nil {
-		return err
-	}
-	f.Float64 = tmp
-	f.Valid = true
-	return nil
-}
-
 // MarshalJSON implements the encoding/json Marshaler interface. It will attempt
 // to encode this NullFloat64 into its JSON representation if valid. If the
 // contained value is +/-INF or NaN, a json.UnsupportedValueError will be

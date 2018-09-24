@@ -167,7 +167,7 @@ func TestInt64SQLScan(t *testing.T) {
 	assertInt64(t, 12345, i, FileLine())
 
 	var i64Str null.NullInt64
-	// NB. Scan will coerce strings, but UnmarshalText and UnmarshalJSON won't.
+	// NB. Scan will coerce strings, but UnmarshalJSON won't.
 	err = i64Str.Scan("12345")
 	fatalIf(t, err, FileLine())
 	assertInt64(t, 12345, i64Str, FileLine())
@@ -187,72 +187,6 @@ func TestInt64SQLScan(t *testing.T) {
 
 	var b null.NullInt64
 	err = b.Scan(true)
-	fatalUnless(t, err, FileLine())
-}
-
-func TestInt64MarshalText(t *testing.T) {
-	i := null.Int64(12345)
-	data, err := i.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "12345", FileLine())
-	data, err = (&i).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "12345", FileLine())
-
-	zero := null.Int64(0)
-	data, err = zero.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "0", FileLine())
-	data, err = (&zero).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "0", FileLine())
-
-	// Null Int64s should be encoded as an empty string
-	nul := null.NullInt64{}
-	data, err = nul.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "", FileLine())
-	data, err = (&nul).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "", FileLine())
-}
-
-func TestInt64UnmarshalText(t *testing.T) {
-	// Successful Valid Parses
-
-	var i null.NullInt64
-	err := i.UnmarshalText([]byte("12345"))
-	fatalIf(t, err, FileLine())
-	assertInt64(t, 12345, i, FileLine())
-
-	var zero null.NullInt64
-	err = zero.UnmarshalText([]byte("0"))
-	fatalIf(t, err, FileLine())
-	assertInt64(t, 0, zero, FileLine())
-
-	// Successful Null Parses
-
-	var blank null.NullInt64
-	err = blank.UnmarshalText([]byte(""))
-	fatalIf(t, err, FileLine())
-	assertNullInt64(t, blank, FileLine())
-
-	var nul null.NullInt64
-	err = nul.UnmarshalText([]byte("null"))
-	fatalIf(t, err, FileLine())
-	assertNullInt64(t, nul, FileLine())
-
-	// Unsuccessful Parses
-	// TODO: make types for type mismatches on parsing, and check that the
-	// correct error type is being returned here.
-
-	var invalid null.NullInt64
-	err = invalid.UnmarshalText([]byte(":D"))
-	fatalUnless(t, err, FileLine())
-
-	var intStr null.NullInt64
-	// Ints wrapped in quotes aren't ints.
-	err = intStr.UnmarshalText([]byte(`"12345"`))
 	fatalUnless(t, err, FileLine())
 }
 

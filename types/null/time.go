@@ -134,40 +134,6 @@ func (t *NullTime) Scan(value interface{}) error {
 	}
 }
 
-// MarshalText implements the encoding TextMarshaler interface. It return the
-// textual representation of this NullTime's value (by calling into the native
-// time.Time's MarshalText()) if valid, or an empty string otherwise.
-func (t NullTime) MarshalText() ([]byte, error) {
-	if !t.Valid {
-		return []byte(""), nil
-	}
-	return t.Time.MarshalText()
-}
-
-// UnmarshalText implements the encoding TextUnmarshaler interface. It will
-// decode a given []byte into this NullTime, so long as the provided string
-// is a valid textual representation of a time.Time or a null.
-//
-// If the decode fails, the value of this NullTime will be unchanged.
-func (t *NullTime) UnmarshalText(text []byte) error {
-	str := string(text)
-	if str == "" || str == "null" {
-		t.Time = time.Time{}
-		t.Valid = false
-		return nil
-	}
-	// TODO: If time.Time.UnmarshalText doesn't change the value of the receiver
-	// we could skip the temporary object by calling .UnmarshalText on t.Time.
-	tmp := time.Time{}
-	err := tmp.UnmarshalText(text)
-	if err != nil {
-		return err
-	}
-	t.Time = tmp
-	t.Valid = true
-	return nil
-}
-
 // MarshalJSON implements the encoding/json Marshaler interface. It will encode
 // this NullTime into its JSON RFC 3339 string representation if valid, or
 // 'null' otherwise.

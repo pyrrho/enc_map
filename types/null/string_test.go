@@ -162,8 +162,8 @@ func TestStringSQLScan(t *testing.T) {
 	fatalIf(t, err, FileLine())
 	assertNullString(t, nul, FileLine())
 
-	// NB. Scan is aggressive about converting values to strings. UnmarshalText
-	// and UnmarshalJSON are less so.
+	// NB. Scan is aggressive about converting values to strings. UnmarshalJSON
+	// are less so.
 	var i null.NullString
 	err = i.Scan(12345)
 	fatalIf(t, err, FileLine())
@@ -178,71 +178,6 @@ func TestStringSQLScan(t *testing.T) {
 	err = b.Scan(true)
 	fatalIf(t, err, FileLine())
 	assertString(t, "true", b, FileLine())
-}
-
-func TestStringMarshalText(t *testing.T) {
-	str := null.String("test")
-	data, err := str.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "test", FileLine())
-	data, err = (&str).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "test", FileLine())
-
-	zero := null.String("")
-	data, err = zero.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "", FileLine())
-	data, err = (&zero).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "", FileLine())
-
-	null := null.NullString{}
-	data, err = null.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "", FileLine())
-	data, err = (&null).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "", FileLine())
-}
-
-func TestStringUnmarshalText(t *testing.T) {
-	// Successful Valid Parses
-
-	var str null.NullString
-	err := str.UnmarshalText([]byte("test"))
-	fatalIf(t, err, FileLine())
-	assertString(t, "test", str, FileLine())
-
-	var nullStrQuoted null.NullString
-	err = nullStrQuoted.UnmarshalText([]byte(`"null"`))
-	fatalIf(t, err, FileLine())
-	assertString(t, `"null"`, nullStrQuoted, FileLine())
-
-	var quotes null.NullString
-	err = quotes.UnmarshalText([]byte(`""`))
-	fatalIf(t, err, FileLine())
-	assertString(t, `""`, quotes, FileLine())
-
-	// Successful Null Parses
-
-	var empty null.NullString
-	err = empty.UnmarshalText([]byte(""))
-	fatalIf(t, err, FileLine())
-	assertNullString(t, empty, FileLine())
-
-	var nulString null.NullString
-	err = nulString.UnmarshalText([]byte("null"))
-	fatalIf(t, err, FileLine())
-	assertString(t, "null", nulString, FileLine())
-
-	var nul null.NullString
-	err = nul.UnmarshalText(nil)
-	fatalIf(t, err, FileLine())
-	assertNullString(t, nul, FileLine())
-
-	// Unsuccessful Parses
-	// TODO: Can we... do that with strings? I don't think we can...
 }
 
 func TestStringMarshalJSON(t *testing.T) {

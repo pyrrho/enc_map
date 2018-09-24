@@ -12,9 +12,9 @@ import (
 //
 // To maintain consistency with the encoding/json package -- and to ensure we
 // never attempt to marshal non-ASCII characters -- this type will emit base64
-// encoded strings from MarshalJSON, MarshalText, and Value (when non-null), and
-// expect to receive base64 encoded strings in UnmarshalJSON, UnmarshalText, and
-// Scan. MarshalMapValue will produce an interface wrapping a []byte.
+// encoded strings from MarshalJSON,and Value (when non-null), and expect to
+// receive base64 encoded strings in UnmarshalJSON and Scan. MarshalMapValue
+// will produce an interface wrapping a []byte.
 //
 // We assume that if Valid is true, the contained ByteSlice will be non-nil. To
 // manually construct a NullByteSlice where Valid is true and ByteSlice is a nil
@@ -173,46 +173,6 @@ func (b *NullByteSlice) Scan(src interface{}) error {
 	}
 }
 
-// MarshalText implements the encoding TextMarshaler interface. It will encode
-// this NullByteSlice into its base64 textual representation if valid, or an
-// empty string otherwise.
-func (b NullByteSlice) MarshalText() ([]byte, error) {
-	if !b.Valid {
-		return []byte{}, nil
-	}
-	enc := make([]byte, base64.StdEncoding.EncodedLen(len(b.ByteSlice)))
-	base64.StdEncoding.Encode(enc, b.ByteSlice)
-	return enc, nil
-}
-
-// UnmarshalText implements the encoding TextUnmarshaler interface. It supports
-// input in the form of base64-encoded []bytes. Empty []bytes will result in a
-// valid-but-empty NullByteSlice, nil []bytes will result in a null
-// NullByteSlice. All other input -- including the string "null" -- will be
-// base64-decoded, and the value of this NullByteSlice will be set accordingly.
-//
-// If the decode fails, the value of this NullByteSlice will be unchanged.
-func (b *NullByteSlice) UnmarshalText(text []byte) error {
-	if text == nil {
-		b.ByteSlice = nil
-		b.Valid = false
-		return nil
-	}
-	if len(text) == 0 {
-		b.ByteSlice = []byte{}
-		b.Valid = true
-		return nil
-	}
-	tmp := make([]byte, base64.StdEncoding.DecodedLen(len(text)))
-	n, err := base64.StdEncoding.Decode(tmp, text)
-	if err != nil {
-		return err
-	}
-	b.ByteSlice = tmp[:n]
-	b.Valid = true
-	return nil
-}
-
 // MarshalJSON implements the encoding/json Marshaler interface. It will encode
 // this NullByteSlice into its base64 representation if valid, or 'null'
 // otherwise.
@@ -281,14 +241,26 @@ func (b *NullByteSlice) UnmarshalJSON(data []byte) error {
 				bs, valid,
 			)
 		}
-		// If the value for "ByteSlice" is nil, life is easy ...
 		if bsIsNil {
+			// If the value for "ByteSlice" is nil, life is easy ...
 			b.ByteSlice = nil
 			b.Valid = valid
 			return nil
+		} else if len(bsAsStr) == 0 {
+			// ... similarly, if the value is of zero length ...
+			b.ByteSlice = []byte{}
+			b.Valid = true
+			return nil
 		}
-		// ... otherwise we have to conditionally base64 decode the string.
-		return b.UnmarshalText([]byte(bsAsStr))
+		// ... otherwise we have to base64 decode the string.
+		tmp := make([]byte, base64.StdEncoding.DecodedLen(len(bsAsStr)))
+		n, err := base64.StdEncoding.Decode(tmp, []byte(bsAsStr))
+		if err != nil {
+			return err
+		}
+		b.ByteSlice = tmp[:n]
+		b.Valid = true
+		return nil
 	case nil:
 		b.ByteSlice = nil
 		b.Valid = false

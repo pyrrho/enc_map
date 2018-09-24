@@ -109,37 +109,6 @@ func (i NullInt64) IsZero() bool {
 	return !i.Valid || i.Int64 == 0
 }
 
-// MarshalText implements the encoding TextMarshaler interface. It will encode
-// this NullInt64 into its textual representation if valid, or an empty string
-// otherwise.
-func (i NullInt64) MarshalText() ([]byte, error) {
-	if !i.Valid {
-		return []byte{}, nil
-	}
-	return []byte(strconv.FormatInt(i.Int64, 10)), nil
-}
-
-// UnmarshalText implements the encoding TextUnmarshaler interface. It will
-// decode a given []byte into this NullInt64, so long as the provided string
-// is a valid textual representation of an int or a null. Empty strings and
-// "null" will decode into a null NullInt64.
-//
-// If the decode fails, the value of this N will be unchanged.
-func (i *NullInt64) UnmarshalText(text []byte) error {
-	str := string(text)
-	if str == "" || str == "null" {
-		i.Valid = false
-		return nil
-	}
-	tmp, err := strconv.ParseInt(string(text), 10, 64)
-	if err != nil {
-		return err
-	}
-	i.Int64 = tmp
-	i.Valid = true
-	return nil
-}
-
 // MarshalJSON implements the encoding/json Marshaler interface. It will encode
 // this NullInt64 into its JSON representation if valid, or 'null' otherwise.
 func (i NullInt64) MarshalJSON() ([]byte, error) {

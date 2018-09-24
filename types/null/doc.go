@@ -7,8 +7,6 @@ implement all of the following interfaces,
  - IsZeroer        from pyrrho/encoding       --  IsZero() bool
  - Valuer          from database/sql/driver   --  Value() (driver.Value, error)
  - Scanner         from database/sql          --  Scan(value interface{}) error
- - TextMarshaler   from encoding              --  MarshalText() ([]byte, error)
- - TextUnmarshaler from encoding              --  UnmarshalText(text []byte) error
  - Marshaler       from encoding/json         --  MarshalJSON() ([]byte, error)
  - Unmarshaler     from encoding/json         --  UnmarshalJSON(data []byte) error
  - Marshaler       from pyrrho/encoding/maps  --  MarshalMap() (map[string]interface{}, error)

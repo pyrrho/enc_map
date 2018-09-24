@@ -101,32 +101,6 @@ func (s NullString) IsZero() bool {
 	return !s.Valid || s.String == ""
 }
 
-// MarshalText implements the encoding TextMarshaler interface. It will return
-// the value of this NullString if valid, or an empty string otherwise.
-func (s NullString) MarshalText() ([]byte, error) {
-	if !s.Valid {
-		return []byte{}, nil
-	}
-	return []byte(s.String), nil
-}
-
-// UnmarshalText implements the encoding TextUnmarshaler interface. It will
-// decode a given []byte into this NullString. Empty []bytes will result in a
-// valid-but-empty NullString, nil []bytes will result in a null NullString. All
-// other input -- including the string "null" -- will result in a valid
-// NullString.
-//
-// If the decode fails, the value of this NullString will be unchanged.
-func (s *NullString) UnmarshalText(text []byte) error {
-	if text == nil {
-		s.String = ""
-		s.Valid = false
-	}
-	s.String = string(text)
-	s.Valid = s.String != ""
-	return nil
-}
-
 // MarshalJSON implements the encoding/json Marshaler interface. It will return
 // the value of this NullString if valid, otherwise 'null'.
 func (s NullString) MarshalJSON() ([]byte, error) {

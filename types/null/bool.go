@@ -3,7 +3,6 @@ package null
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 )
 
@@ -106,47 +105,6 @@ func (b NullBool) IsNil() bool {
 // if this NullBool is null or if its value is false.
 func (b NullBool) IsZero() bool {
 	return !b.Valid || !b.Bool
-}
-
-// MarshalText implements the encoding TextMarshaler interface. It will encode
-// this NullBool into its textual representation if valid, or an empty string
-// otherwise.
-func (b NullBool) MarshalText() ([]byte, error) {
-	if !b.Valid {
-		return []byte{}, nil
-	}
-	if !b.Bool {
-		return []byte("false"), nil
-	}
-	return []byte("true"), nil
-}
-
-// UnmarshalText implements the encoding TextUnmarshaler interface. It will
-// decode a given []byte into this NullBool, so long as the provided string is a
-// valid textual representation of a bool or a null.
-//
-// "null" and empty strings will both result in a null NullBool. "true" and
-// "false" will result in a valid NullBool containing the value you'd expect.
-//
-// If the decode fails, the value of this NullBool will be unchanged.
-func (b *NullBool) UnmarshalText(text []byte) error {
-	str := string(text)
-	switch str {
-	case "", "null":
-		b.Bool = false
-		b.Valid = false
-		return nil
-	case "true":
-		b.Bool = true
-		b.Valid = true
-		return nil
-	case "false":
-		b.Bool = false
-		b.Valid = true
-		return nil
-	default:
-		return errors.New("invalid input: " + str)
-	}
 }
 
 // MarshalJSON implements the encoding/json Marshaler interface. It will encode

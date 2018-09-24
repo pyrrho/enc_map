@@ -185,7 +185,7 @@ func TestFloat64SQLScan(t *testing.T) {
 	assertFloat64(t, 12345, i, FileLine())
 
 	var f64Str null.NullFloat64
-	// NB. Scan will coerce strings, but UnmarshalText and UnmarshalJSON won't.
+	// NB. Scan will coerce strings, but UnmarshalJSON won't.
 	err = f64Str.Scan("1.2345")
 	fatalIf(t, err, FileLine())
 	assertFloat64(t, 1.2345, f, FileLine())
@@ -197,105 +197,6 @@ func TestFloat64SQLScan(t *testing.T) {
 
 	var wrong null.NullFloat64
 	err = wrong.Scan("hello world")
-	fatalUnless(t, err, FileLine())
-}
-
-func TestFloat64MarshalText(t *testing.T) {
-	f := null.Float64(1.2345)
-	data, err := f.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "1.2345", FileLine())
-	data, err = (&f).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "1.2345", FileLine())
-
-	zero := null.Float64(0)
-	data, err = zero.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "0", FileLine())
-	data, err = (&zero).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "0", FileLine())
-
-	nan := null.Float64(math.NaN())
-	data, err = nan.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "NaN", FileLine())
-	data, err = (&nan).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "NaN", FileLine())
-
-	pinf := null.Float64(math.Inf(1))
-	data, err = pinf.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "+Inf", FileLine())
-	data, err = (&pinf).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "+Inf", FileLine())
-
-	ninf := null.Float64(math.Inf(-1))
-	data, err = ninf.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "-Inf", FileLine())
-	data, err = (&ninf).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "-Inf", FileLine())
-
-	nul := null.NullFloat64{}
-	data, err = nul.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "", FileLine())
-	data, err = (&nul).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "", FileLine())
-}
-
-func TestFloat64UnmarshalText(t *testing.T) {
-	// Successful Valid Parses
-
-	var f null.NullFloat64
-	err := f.UnmarshalText([]byte("1.2345"))
-	fatalIf(t, err, FileLine())
-	assertFloat64(t, 1.2345, f, FileLine())
-
-	var i null.NullFloat64
-	err = i.UnmarshalText([]byte("12345"))
-	fatalIf(t, err, FileLine())
-	assertFloat64(t, 12345.0, i, FileLine())
-
-	var zero null.NullFloat64
-	err = zero.UnmarshalText([]byte("0"))
-	fatalIf(t, err, FileLine())
-	assertFloat64(t, 0.0, zero, FileLine())
-
-	var nan null.NullFloat64
-	err = nan.UnmarshalText([]byte("NaN"))
-	fatalIf(t, err, FileLine())
-	assertFloat64(t, math.NaN(), nan, FileLine())
-
-	// Successful Null Parses
-
-	var blank null.NullFloat64
-	err = blank.UnmarshalText([]byte(""))
-	fatalIf(t, err, FileLine())
-	assertNullFloat64(t, blank, FileLine())
-
-	var nul null.NullFloat64
-	err = nul.UnmarshalText([]byte("null"))
-	fatalIf(t, err, FileLine())
-	assertNullFloat64(t, nul, FileLine())
-
-	// Unsuccessful Parses
-	// TODO: make types for type mismatches on parsing, and check that the
-	// correct error type is being returned here.
-
-	var invalid null.NullFloat64
-	err = invalid.UnmarshalText([]byte(":D"))
-	fatalUnless(t, err, FileLine())
-
-	var floatStr null.NullFloat64
-	// Floats wrapped in quotes aren't floats.
-	err = floatStr.UnmarshalText([]byte(`"1.2345"`))
 	fatalUnless(t, err, FileLine())
 }
 

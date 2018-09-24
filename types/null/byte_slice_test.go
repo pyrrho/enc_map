@@ -195,61 +195,6 @@ func TestByteSliceSQLScan(t *testing.T) {
 	fatalUnless(t, err, FileLine())
 }
 
-func TestByteSliceMarshalText(t *testing.T) {
-	bs := null.ByteSlice(byteSliceValue)
-	txt, err := bs.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, txt, string(byteSliceBase64), FileLine())
-	txt, err = (&bs).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, txt, string(byteSliceBase64), FileLine())
-
-	empty := null.ByteSlice([]byte{})
-	txt, err = empty.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, txt, "", FileLine())
-	txt, err = (&empty).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, txt, "", FileLine())
-
-	nul := null.NullByteSlice{}
-	txt, err = nul.MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, txt, "", FileLine())
-	txt, err = (&nul).MarshalText()
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, txt, "", FileLine())
-}
-
-func TestByteSliceUnmarshalText(t *testing.T) {
-	// Successful Valid Parses
-
-	var bs null.NullByteSlice
-	err := bs.UnmarshalText(byteSliceBase64)
-	fatalIf(t, err, FileLine())
-	assertByteSlice(t, byteSliceValue, bs, FileLine())
-
-	var nullStr null.NullByteSlice
-	err = nullStr.UnmarshalText([]byte("null"))
-	fatalIf(t, err, FileLine())
-	// Skip checking what it decodes to; it's just garbage.
-
-	var empty null.NullByteSlice
-	err = empty.UnmarshalText([]byte(""))
-	fatalIf(t, err, FileLine())
-	assertByteSlice(t, []byte(""), empty, FileLine())
-
-	// Successful Null Parses
-
-	var nul null.NullByteSlice
-	err = nul.UnmarshalText(nil)
-	fatalIf(t, err, FileLine())
-	assertNullByteSlice(t, nul, FileLine())
-
-	// Unsuccessful Parses
-	// If... There are any>?
-}
-
 func TestByteSliceMarshalJSON(t *testing.T) {
 	bs := null.ByteSlice(byteSliceValue)
 	data, err := json.Marshal(bs)
