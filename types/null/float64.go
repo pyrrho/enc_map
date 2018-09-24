@@ -52,8 +52,9 @@ func Float64(i interface{}) NullFloat64 {
 		return NullFloat64{}
 	}
 	panic(fmt.Errorf(
-		"null.Float64: the given argument (%#v of type %T) was not of type "+
-			"int, float64, *float64, float32, *float32, or nil", i, i))
+		"null.NullFloat64: invalid constructor argument; %#v of type %T "+
+			"is not of type int, float64, *float64, float32, *float32, or nil",
+		i, i))
 }
 
 // Float64From creates a valid NullFloat64 from f.
@@ -147,6 +148,9 @@ func (f NullFloat64) MarshalJSON() ([]byte, error) {
 //
 // If the decode fails, the value of this NullFloat64 will be unchanged.
 func (f *NullFloat64) UnmarshalJSON(data []byte) error {
+	if f == nil {
+		return fmt.Errorf("null.NullFloat64: UnmarshalJSON called on nil pointer")
+	}
 	var j interface{}
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
@@ -167,11 +171,8 @@ func (f *NullFloat64) UnmarshalJSON(data []byte) error {
 		f.Valid = false
 		return nil
 	default:
-		return fmt.Errorf(
-			"null: cannot unmarshal %T (%#v) into Go value of type "+
-				"null.NullFloat64",
-			j, j,
-		)
+		return fmt.Errorf("null.NullFloat64: cannot unmarshal JSON of type %T (%v)",
+			val, data)
 	}
 }
 

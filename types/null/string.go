@@ -37,8 +37,8 @@ func String(i interface{}) NullString {
 		return NullString{}
 	}
 	panic(fmt.Errorf(
-		"null.String: the given argument (%#v of type %T) was not of type "+
-			"string, *string, or nil", i, i))
+		"null.NullString: invalid constructor argument; %#v of type %T "+
+			"is not of type string, *string, or nil", i, i))
 }
 
 // StringFrom creates a valid String from s.
@@ -122,6 +122,9 @@ func (s NullString) MarshalJSON() ([]byte, error) {
 //
 // If the decode fails, the value of this NullString will be unchanged.
 func (s *NullString) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("null.NullString: UnmarshalJSON called on nil pointer")
+	}
 	var j interface{}
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
@@ -138,11 +141,8 @@ func (s *NullString) UnmarshalJSON(data []byte) error {
 		s.Valid = false
 		return nil
 	default:
-		return fmt.Errorf(
-			"null: cannot unmarshal %T (%#v) into Go value of type "+
-				"null.NullString",
-			j, j,
-		)
+		return fmt.Errorf("null.NullString: cannot unmarshal JSON of type %T (%v)",
+			val, data)
 	}
 }
 

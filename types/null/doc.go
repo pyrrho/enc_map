@@ -6,7 +6,7 @@ implement all of the following interfaces,
  - IsNiler         from pyrrho/encoding       --  IsNil() bool
  - IsZeroer        from pyrrho/encoding       --  IsZero() bool
  - Valuer          from database/sql/driver   --  Value() (driver.Value, error)
- - Scanner         from database/sql          --  Scan(value interface{}) error
+ - Scanner         from database/sql          --  Scan(src interface{}) error
  - Marshaler       from encoding/json         --  MarshalJSON() ([]byte, error)
  - Unmarshaler     from encoding/json         --  UnmarshalJSON(data []byte) error
  - Marshaler       from pyrrho/encoding/maps  --  MarshalMap() (map[string]interface{}, error)

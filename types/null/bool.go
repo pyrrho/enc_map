@@ -39,8 +39,8 @@ func Bool(i interface{}) NullBool {
 		return NullBool{}
 	}
 	panic(fmt.Errorf(
-		"null.Bool: the given argument (%#v of type %T) was not of type "+
-			"bool, *bool, or nil", i, i))
+		"null.NullBool: invalid constructor argument; %#v of type %T "+
+			"is not of type bool, *bool, or nil", i, i))
 }
 
 // BoolFrom creates a valid NullBool from b.
@@ -132,6 +132,9 @@ func (b NullBool) MarshalJSON() ([]byte, error) {
 //
 // If the decode fails, the value of this NullBool will be unchanged.
 func (b *NullBool) UnmarshalJSON(data []byte) error {
+	if b == nil {
+		return fmt.Errorf("null.NullBool: UnmarshalJSON called on nil pointer")
+	}
 	var j interface{}
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
@@ -152,7 +155,8 @@ func (b *NullBool) UnmarshalJSON(data []byte) error {
 		b.Valid = false
 		return nil
 	default:
-		return fmt.Errorf("null: cannot unmarshal %T (%#v) into Go value of type null.NullBool", j, j)
+		return fmt.Errorf("null.NullBool: cannot unmarshal JSON of type %T (%v)",
+			val, data)
 	}
 }
 

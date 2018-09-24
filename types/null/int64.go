@@ -42,8 +42,8 @@ func Int64(i interface{}) NullInt64 {
 		return NullInt64{}
 	}
 	panic(fmt.Errorf(
-		"null.Int64: the given argument (%#v of type %T) was not of type "+
-			"int, int64, *int64, or nil", i, i))
+		"null.NullInt64: invalid constructor argument; %#v of type %T "+
+			"is not of type int, int64, *int64, or nil", i, i))
 }
 
 // Int64From creates a valid NullInt64 from i.
@@ -128,6 +128,9 @@ func (i NullInt64) MarshalJSON() ([]byte, error) {
 //
 // If the decode fails, the value of this NullInt64 will be unchanged.
 func (i *NullInt64) UnmarshalJSON(data []byte) error {
+	if i == nil {
+		return fmt.Errorf("null.NullInt64: UnmarshalJSON called on nil pointer")
+	}
 	var j interface{}
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
@@ -163,11 +166,8 @@ func (i *NullInt64) UnmarshalJSON(data []byte) error {
 		i.Valid = false
 		return nil
 	default:
-		return fmt.Errorf(
-			"null: cannot unmarshal %T (%#v) into Go value of type "+
-				"null.NullInt64",
-			j, j,
-		)
+		return fmt.Errorf("null.NullInt64: cannot unmarshal JSON of type %T (%v)",
+			val, data)
 	}
 }
 

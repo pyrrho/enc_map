@@ -38,8 +38,8 @@ func Time(i interface{}) NullTime {
 		return NullTime{}
 	}
 	panic(fmt.Errorf(
-		"null.Time: the given argument (%#v of type %T) was not of type "+
-			"time.Time, *time.Time, or nil", i, i))
+		"null.NullTime: invalid constructor argument; %#v of type %T "+
+			"is not of type time.Time, *time.Time, or nil", i, i))
 }
 
 // TimeFrom creates a valid Time from t.
@@ -118,10 +118,13 @@ func (t NullTime) Value() (driver.Value, error) {
 // Scan implements the database/sql Scanner interface. It will receive a value
 // from an SQL database and assign it to this NullTime, so long as the provided
 // data is of type nil or time.Time. All other types will result in an error.
-func (t *NullTime) Scan(value interface{}) error {
-	switch x := value.(type) {
+func (t *NullTime) Scan(src interface{}) error {
+	if t == nil {
+		return fmt.Errorf("null.NullTime: Scan called on nil pointer")
+	}
+	switch val := src.(type) {
 	case time.Time:
-		t.Time = x
+		t.Time = val
 		t.Valid = true
 		return nil
 	case nil:
@@ -129,8 +132,7 @@ func (t *NullTime) Scan(value interface{}) error {
 		t.Valid = false
 		return nil
 	default:
-		return fmt.Errorf("null: cannot scan type %T into null.Time: %v",
-			value, value)
+		return fmt.Errorf("null.NullTime: cannot scan type %T (%v)", val, src)
 	}
 }
 
@@ -154,6 +156,9 @@ func (t NullTime) MarshalJSON() ([]byte, error) {
 //
 // If the decode fails, the value of this NullTime will be unchanged.
 func (t *NullTime) UnmarshalJSON(data []byte) error {
+	if t == nil {
+		return fmt.Errorf("null.NullTime: UnmarshalJSON called on nil pointer")
+	}
 	var j interface{}
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
@@ -171,20 +176,24 @@ func (t *NullTime) UnmarshalJSON(data []byte) error {
 		t.Valid = true
 		return nil
 	case map[string]interface{}:
-		ti, tiOK := val["Time"].(string)
-		valid, validOK := val["Valid"].(bool)
-		if !tiOK || !validOK {
+		var (
+			ti, tiExists     = val["Time"]
+			tiIsNil          = tiExists && ti == nil
+			tiAsStr, tiIsStr = ti.(string)
+			tiOK             = tiIsNil || tiIsStr
+			valid, validOK   = val["Valid"].(bool)
+		)
+		if !(tiOK && validOK) {
 			return fmt.Errorf(
-				`null: unmarshalling object into Go value of type null.Time `+
-					`requires key "Time" to be of type string and key "Valid" `+
-					`to be of type bool; found %T and %T, respectively`,
-				val["Time"], val["Valid"],
-			)
+				`null.NullTime: unmarshalling JSON object requires key "Time" `+
+					`to be of type string or nil, and key "Valid" to be of `+
+					`type bool; found %T and %T, respectively`,
+				ti, valid)
 		}
 		// TODO: If time.Time.UnmarshalJSON doesn't change the value of the
 		// receiver we could skip the temporary object by calling .UnmarshalJSON
 		// on t.Time.
-		tmp, err := time.Parse(time.RFC3339, ti)
+		tmp, err := time.Parse(time.RFC3339, tiAsStr)
 		if err != nil {
 			return err
 		}
@@ -196,11 +205,8 @@ func (t *NullTime) UnmarshalJSON(data []byte) error {
 		t.Valid = false
 		return nil
 	default:
-		return fmt.Errorf(
-			"null: cannot unmarshal %T (%#v) into Go value of type "+
-				"null.NullTime",
-			j, j,
-		)
+		return fmt.Errorf("null.NullTime: cannot unmarshal JSON of type %T (%v)",
+			val, data)
 	}
 }
 

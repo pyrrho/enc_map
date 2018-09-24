@@ -48,8 +48,8 @@ func ByteSlice(i interface{}) NullByteSlice {
 		return NullByteSlice{}
 	}
 	panic(fmt.Errorf(
-		"null.ByteSlice: the given argument (%#v of type %T) was not of type "+
-			"[]byte, *[]byte, or nil", i, i))
+		"null.NullByteSlice: invalid constructor argument; %#v of type %T "+
+			"is not of type []byte, *[]byte, or nil", i, i))
 }
 
 // ByteSliceFrom creates a valid Byteslice from b.
@@ -145,6 +145,9 @@ func (b NullByteSlice) Value() (driver.Value, error) {
 // provided data can be coerced into a []byte or a nil. Valid data is expected
 // to be base64 encoded.
 func (b *NullByteSlice) Scan(src interface{}) error {
+	if b == nil {
+		return fmt.Errorf("null.NullByteSlice: Scan called on nil pointer")
+	}
 	switch val := src.(type) {
 	case []byte:
 		tmp := make([]byte, base64.StdEncoding.DecodedLen(len(val)))
@@ -168,8 +171,8 @@ func (b *NullByteSlice) Scan(src interface{}) error {
 		b.Valid = false
 		return nil
 	default:
-		return fmt.Errorf("null: cannot scan type %T into NullByteSlice: %v",
-			src, src)
+		return fmt.Errorf("null.NullByteSlice: cannot scan type %T (%v)",
+			val, src)
 	}
 }
 
@@ -201,6 +204,9 @@ func (b NullByteSlice) MarshalJSON() ([]byte, error) {
 //
 // If the decode fails, the value of this NullByteSlice will be unchanged.
 func (b *NullByteSlice) UnmarshalJSON(data []byte) error {
+	if b == nil {
+		return fmt.Errorf("null.NullByteSlice: UnmarshalJSON called on nil pointer")
+	}
 	var j interface{}
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
@@ -234,10 +240,9 @@ func (b *NullByteSlice) UnmarshalJSON(data []byte) error {
 		)
 		if !(bsOK && validOK) {
 			return fmt.Errorf(
-				`null: unmarshalling object into Go value of type `+
-					`null.NullByteSlice requires key "ByteSlice" to be of `+
-					`type string or nil, and key "Valid" to be of type bool; `+
-					`found %T and %T, respectively`,
+				`null.NullByteSlice: unmarshalling JSON object requires key `+
+					`"ByteSlice" to be of type string or nil, and key "Valid" `+
+					`to be of type bool; found %T and %T, respectively`,
 				bs, valid,
 			)
 		}
@@ -266,11 +271,8 @@ func (b *NullByteSlice) UnmarshalJSON(data []byte) error {
 		b.Valid = false
 		return nil
 	default:
-		return fmt.Errorf(
-			"null: cannot unmarshal %T (%#v) into Go value of type "+
-				"null.ByteSlice",
-			j, j,
-		)
+		return fmt.Errorf("null.NullByteSlice: cannot unmarshal JSON of type %T (%v)",
+			val, data)
 	}
 }
 
