@@ -127,7 +127,7 @@ func TestTimeIsZero(t *testing.T) {
 	if !empty.IsZero() {
 		t.Fatalf("IsZero() should be true")
 	}
-	nul := null.NullByteSlice{}
+	nul := null.ByteSlice{}
 	if !nul.IsZero() {
 		t.Fatalf("IsZero() should be true")
 	}

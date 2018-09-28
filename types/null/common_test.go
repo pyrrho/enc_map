@@ -14,10 +14,8 @@ import (
 // and helper functions that are used in the package's test suite.
 
 var (
-	byteSliceBase64 = []byte("REFJQ09OIFY=")
-	byteSliceValue  = []byte("DAICON V")
-	timeString      = "2012-12-21T21:21:21Z"
-	timeValue       = time.Date(
+	timeString = "2012-12-21T21:21:21Z"
+	timeValue  = time.Date(
 		2012, time.December, 21,
 		21, 21, 21, 0,
 		time.UTC,
@@ -28,7 +26,6 @@ var (
 	boolFalseJSON   = []byte(`false`)
 	boolTrueJSON    = []byte(`true`)
 	boolStringJSON  = []byte(`"true"`)
-	byteSliceJSON   = []byte(`"REFJQ09OIFY="`)
 	floatJSON       = []byte(`1.2345`)
 	floatStringJSON = []byte(`"1.2345"`)
 	intJSON         = []byte(`12345`)

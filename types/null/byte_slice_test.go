@@ -1,290 +1,323 @@
 package null_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"testing"
 
 	"github.com/pyrrho/encoding/maps"
 	"github.com/pyrrho/encoding/types/null"
+	"github.com/stretchr/testify/require"
 )
 
-// Helper Functions
-
-func assertByteSlice(t *testing.T, expected []byte, bs null.NullByteSlice, fileLine string) {
-	if !bs.Valid {
-		t.Fatalf("%s: NullByteSlice is null, but should be valid", fileLine)
+func base64ed(k string) []byte {
+	var m = map[string][]byte{
+		"DAICON V":   []byte("REFJQ09OIFY="),
+		`"DAICON V"`: []byte(`"REFJQ09OIFY="`),
 	}
-	if !bytes.Equal(expected, bs.ByteSlice) {
-		t.Fatalf("%s: %v (%s) ≠ %v (%s)",
-			fileLine,
-			expected, expected,
-			bs.ByteSlice, bs.ByteSlice,
-		)
-	}
+	return m[k]
 }
 
-func assertNullByteSlice(t *testing.T, bs null.NullByteSlice, fileLine string) {
-	if bs.Valid {
-		t.Fatalf("%s: NullByteSlice is valid, but should be null", fileLine)
-	}
-}
+func TestByteSliceCtors(t *testing.T) {
+	require := require.New(t)
 
-// Tests
+	// null.NullByteSlice() retuns a new null null.ByteSlice.
+	// This is equivalent to null.ByteSlice{}.
+	nul := null.NullByteSlice()
+	require.False(nul.Valid)
 
-func TestByteSliceFrom(t *testing.T) {
-	assertByteSlice(t, byteSliceValue, null.ByteSliceFrom(byteSliceValue), FileLine())
-	assertByteSlice(t, []byte{}, null.ByteSliceFrom([]byte{}), FileLine())
+	empty := null.ByteSlice{}
+	require.False(empty.Valid)
 
-	var nl []byte
-	assertNullByteSlice(t, null.ByteSliceFrom(nil), FileLine())
-	assertNullByteSlice(t, null.ByteSliceFrom(nl), FileLine())
-}
+	// null.NewByteSlice constructs a new, valid, possibly zero-length
+	// null.ByteSlice ...
+	b := null.NewByteSlice([]byte("DAICON V"))
+	require.True(b.Valid)
+	require.Equal([]byte("DAICON V"), b.ByteSlice)
 
-func TestByteSliceFromPtr(t *testing.T) {
-	assertByteSlice(t, byteSliceValue, null.ByteSliceFromPtr(&byteSliceValue), FileLine())
+	b2 := null.NewByteSlice([]byte(""))
+	require.True(b2.Valid)
+	require.Equal([]byte{}, b2.ByteSlice)
 
-	var nlPtr *[]byte
-	var nl []byte
-	ptrToNl := &nl
-	assertNullByteSlice(t, null.ByteSliceFromPtr(nil), FileLine())
-	assertNullByteSlice(t, null.ByteSliceFromPtr(nlPtr), FileLine())
-	assertNullByteSlice(t, null.ByteSliceFromPtr(ptrToNl), FileLine())
-}
+	b3 := null.NewByteSlice([]byte{})
+	require.True(b3.Valid)
+	require.Equal([]byte{}, b3.ByteSlice)
 
-func TestByteSliceCtor(t *testing.T) {
-	var nilPtr *[]byte
+	// ... unless a nil []byte is passed in.
+	nul2 := null.NewByteSlice([]byte(nil))
+	require.False(nul2.Valid)
 
-	assertByteSlice(t, byteSliceValue, null.ByteSlice(byteSliceValue), FileLine())
-	assertByteSlice(t, []byte{}, null.ByteSlice([]byte{}), FileLine())
-	assertByteSlice(t, byteSliceValue, null.ByteSlice(&byteSliceValue), FileLine())
-	assertNullByteSlice(t, null.ByteSlice(nil), FileLine())
-	assertNullByteSlice(t, null.ByteSlice(nilPtr), FileLine())
-}
+	nul3 := null.NewByteSlice(nil)
+	require.False(nul3.Valid)
 
-func TestFailureNewByteSliceFromInt(t *testing.T) {
-	defer ShouldPanic(t, FileLine())
-	_ = null.ByteSlice(2012)
-}
+	tmp := []byte(nil)
+	nul4 := null.NewByteSlice(tmp)
+	require.False(nul4.Valid)
 
-func TestFailureNewByteSliceFromString(t *testing.T) {
-	defer ShouldPanic(t, FileLine())
-	_ = null.ByteSlice("DAICON V")
+	// null.NewByteSliceStr constructs a new, valid null.ByteSlice, but it takes
+	// a string, rather than a []byte.
+	s := null.NewByteSliceStr("DAICON V")
+	require.True(s.Valid)
+	require.EqualValues("DAICON V", s.ByteSlice)
+
+	s2 := null.NewByteSliceStr("")
+	require.True(s2.Valid)
+	require.EqualValues([]byte{}, s2.ByteSlice)
+
+	// You can also construct a null.ByteSlice with a base64 encoded string.
+	// Note that this form may return an error.
+	b3, err := null.NewByteSliceFromBase64([]byte("REFJQ09OIFY="))
+	require.NoError(err)
+	require.True(b3.Valid)
+	require.EqualValues("DAICON V", b3.ByteSlice)
+
+	s3, err := null.NewByteSliceFromBase64Str("REFJQ09OIFY=")
+	require.NoError(err)
+	require.True(s3.Valid)
+	require.EqualValues("DAICON V", s3.ByteSlice)
 }
 
 func TestByteSliceValueOrZero(t *testing.T) {
-	valid := null.ByteSlice(byteSliceValue)
-	if !bytes.Equal(byteSliceValue, valid.ValueOrZero()) {
-		t.Fatalf("unexpected ValueOrZero(), %s ≠ %s ", byteSliceValue, valid.ValueOrZero())
-	}
+	require := require.New(t)
 
-	nul := null.NullByteSlice{}
-	if !bytes.Equal([]byte{}, nul.ValueOrZero()) {
-		t.Fatalf("unexpected ValueOrZero(), %s ≠ %s", []byte{}, nul.ValueOrZero())
-	}
-}
+	b := null.NewByteSliceStr("DAICON V")
+	require.Equal([]byte("DAICON V"), b.ValueOrZero())
 
-func TestByteSlicePtr(t *testing.T) {
-	bs := null.ByteSlice(byteSliceValue)
-	ptr := bs.Ptr()
-	if !bytes.Equal(*ptr, byteSliceValue) {
-		t.Fatalf("bad %s byte slice: %#v ≠ %v\n", "pointer", ptr, byteSliceValue)
-	}
-
-	nul := null.NullByteSlice{}
-	ptr = nul.Ptr()
-	if ptr != nil {
-		t.Fatalf("bad %s byte slice: %#v ≠ %s\n", "nil pointer", ptr, "nil")
-	}
+	n := null.ByteSlice{}
+	require.Equal([]byte{}, n.ValueOrZero())
 }
 
 func TestByteSliceSet(t *testing.T) {
-	bs := null.NullByteSlice{}
-	assertNullByteSlice(t, bs, FileLine())
-	bs.Set(byteSliceValue)
-	assertByteSlice(t, byteSliceValue, bs, FileLine())
+	require := require.New(t)
+
+	bs := null.ByteSlice{}
+
+	bs.Set([]byte("DAICON V"))
+	require.True(bs.Valid)
+	require.Equal([]byte("DAICON V"), bs.ByteSlice)
+
+	bs.Set([]byte(nil))
+	require.False(bs.Valid)
+
 	bs.Set([]byte{})
-	assertByteSlice(t, []byte{}, bs, FileLine())
+	require.True(bs.Valid)
+	require.Equal([]byte{}, bs.ByteSlice)
+
 	bs.Set(nil)
-	assertNullByteSlice(t, bs, FileLine())
+	require.False(bs.Valid)
+
+	bs.Set([]byte("Hello again!"))
+	require.True(bs.Valid)
+	require.Equal([]byte("Hello again!"), bs.ByteSlice)
+}
+
+func TestByteSliceSetStr(t *testing.T) {
+	require := require.New(t)
+
+	bs := null.ByteSlice{}
+
+	bs.SetStr("DAICON V")
+	require.True(bs.Valid)
+	require.Equal([]byte("DAICON V"), bs.ByteSlice)
+
+	bs.SetStr("")
+	require.True(bs.Valid)
+	require.Equal([]byte{}, bs.ByteSlice)
+
+	bs.SetStr("Hello again!")
+	require.True(bs.Valid)
+	require.Equal([]byte("Hello again!"), bs.ByteSlice)
 }
 
 func TestByteSliceNull(t *testing.T) {
-	bs := null.ByteSlice(byteSliceValue)
-	assertByteSlice(t, byteSliceValue, bs, FileLine())
+	require := require.New(t)
+
+	bs := null.NewByteSliceStr("DAICON V")
+
 	bs.Null()
-	assertNullByteSlice(t, bs, FileLine())
+	require.False(bs.Valid)
 }
 
 func TestByteSliceIsNil(t *testing.T) {
-	bs := null.ByteSlice(byteSliceValue)
-	if bs.IsNil() {
-		t.Fatalf("IsNil() should be false")
-	}
-	empty := null.ByteSlice([]byte{})
-	if empty.IsNil() {
-		t.Fatalf("IsNil() should be false")
-	}
-	nul := null.NullByteSlice{}
-	if !nul.IsNil() {
-		t.Fatalf("IsNil() should be true")
-	}
+	require := require.New(t)
+
+	bs := null.NewByteSliceStr("DAICON V")
+	require.False(bs.IsNil())
+
+	empty := null.NewByteSlice([]byte{})
+	require.False(empty.IsNil())
+
+	nul := null.ByteSlice{}
+	require.True(nul.IsNil())
 }
 
 func TestByteSliceIsZero(t *testing.T) {
-	bs := null.ByteSlice(byteSliceValue)
-	if bs.IsZero() {
-		t.Fatalf("IsZero() should be false")
-	}
-	empty := null.ByteSlice([]byte{})
-	if !empty.IsZero() {
-		t.Fatalf("IsZero() should be true")
-	}
-	nul := null.NullByteSlice{}
-	if !nul.IsZero() {
-		t.Fatalf("IsZero() should be true")
-	}
+	require := require.New(t)
+
+	bs := null.NewByteSliceStr("DAICON V")
+	require.False(bs.IsZero())
+
+	empty := null.NewByteSlice([]byte{})
+	require.True(empty.IsZero())
+
+	nul := null.ByteSlice{}
+	require.True(nul.IsZero())
 }
 
 func TestByteSliceSQLValue(t *testing.T) {
-	bs := null.ByteSlice(byteSliceValue)
+	require := require.New(t)
+
+	bs := null.NewByteSliceStr("DAICON V")
 	val, err := bs.Value()
-	fatalIf(t, err, FileLine())
-	if !bytes.Equal(byteSliceBase64, val.([]byte)) {
-		t.Fatalf("NullByteSlice{..., true}.Value() should return a valid driver.Value ([]byte)")
-	}
+	require.NoError(err)
+	require.Equal(base64ed("DAICON V"), val)
 
-	empty := null.ByteSlice([]byte{})
+	empty := null.NewByteSlice([]byte{})
 	val, err = empty.Value()
-	fatalIf(t, err, FileLine())
-	if !bytes.Equal([]byte{}, val.([]byte)) {
-		t.Fatalf("NullByteSlice{..., true}.Value() should return a valid driver.Value ([]byte)")
-	}
+	require.NoError(err)
+	require.Equal([]byte{}, val)
 
-	nul := null.NullByteSlice{}
+	nul := null.ByteSlice{}
 	val, err = nul.Value()
-	fatalIf(t, err, FileLine())
-	if nil != val {
-		t.Fatalf("NullByteSlice{..., false}.Value() should return a nil driver.Value")
-	}
+	require.NoError(err)
+	require.Equal(nil, val)
 }
 
 func TestByteSliceSQLScan(t *testing.T) {
-	var bs null.NullByteSlice
-	err := bs.Scan(byteSliceBase64)
-	fatalIf(t, err, FileLine())
-	assertByteSlice(t, byteSliceValue, bs, FileLine())
+	require := require.New(t)
 
-	var str null.NullByteSlice
-	err = str.Scan(string(byteSliceBase64))
-	fatalIf(t, err, FileLine())
-	assertByteSlice(t, byteSliceValue, str, FileLine())
+	var bs null.ByteSlice
+	err := bs.Scan(base64ed("DAICON V"))
+	require.NoError(err)
+	require.True(bs.Valid)
+	require.Equal([]byte("DAICON V"), bs.ByteSlice)
 
-	var empty null.NullByteSlice
+	var str null.ByteSlice
+	err = str.Scan(string(base64ed("DAICON V")))
+	require.NoError(err)
+	require.True(str.Valid)
+	require.Equal([]byte("DAICON V"), str.ByteSlice)
+
+	var empty null.ByteSlice
 	err = empty.Scan([]byte{})
-	fatalIf(t, err, FileLine())
-	assertByteSlice(t, []byte{}, empty, FileLine())
+	require.NoError(err)
+	require.True(empty.Valid)
+	require.Equal([]byte{}, empty.ByteSlice)
 
-	var nul null.NullByteSlice
+	var nul null.ByteSlice
 	err = nul.Scan(nil)
-	fatalIf(t, err, FileLine())
-	assertNullByteSlice(t, nul, FileLine())
+	require.NoError(err)
+	require.False(nul.Valid)
 
-	var wrong null.NullByteSlice
+	var wrong null.ByteSlice
 	err = wrong.Scan(int64(42))
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 }
 
 func TestByteSliceMarshalJSON(t *testing.T) {
-	bs := null.ByteSlice(byteSliceValue)
+	require := require.New(t)
+
+	bs := null.NewByteSliceStr("DAICON V")
 	data, err := json.Marshal(bs)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, string(byteSliceJSON), FileLine())
+	require.NoError(err)
+	require.EqualValues(base64ed(`"DAICON V"`), data)
 	data, err = json.Marshal(&bs)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, string(byteSliceJSON), FileLine())
+	require.NoError(err)
+	require.EqualValues(base64ed(`"DAICON V"`), data)
 
-	empty := null.ByteSlice([]byte{})
+	empty := null.NewByteSlice([]byte{})
 	data, err = json.Marshal(empty)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, `""`, FileLine())
+	require.NoError(err)
+	require.EqualValues(`""`, data)
 	data, err = json.Marshal(&empty)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, `""`, FileLine())
+	require.NoError(err)
+	require.EqualValues(`""`, data)
 
-	nul := null.NullByteSlice{}
+	nul := null.ByteSlice{}
 	data, err = json.Marshal(nul)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "null", FileLine())
+	require.NoError(err)
+	require.EqualValues("null", data)
 	data, err = json.Marshal(&nul)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "null", FileLine())
+	require.NoError(err)
+	require.EqualValues("null", data)
 }
 
 func TestByteSliceUnmarshalJSON(t *testing.T) {
+	require := require.New(t)
+	var err error
+
 	// Successful Valid Parses
 
-	var bs null.NullByteSlice
-	err := json.Unmarshal(byteSliceJSON, &bs)
-	fatalIf(t, err, FileLine())
-	assertByteSlice(t, byteSliceValue, bs, FileLine())
+	var bs null.ByteSlice
+	err = json.Unmarshal(base64ed(`"DAICON V"`), &bs)
+	require.NoError(err)
+	require.True(bs.Valid)
+	require.Equal([]byte("DAICON V"), bs.ByteSlice)
 
-	var quotes null.NullByteSlice
+	var quotes null.ByteSlice
 	err = json.Unmarshal([]byte(`""`), &quotes)
-	fatalIf(t, err, FileLine())
-	assertByteSlice(t, []byte(""), quotes, FileLine())
+	require.NoError(err)
+	require.True(quotes.Valid)
+	require.Equal([]byte(""), quotes.ByteSlice)
 
-	var nullStrQuoted null.NullByteSlice
+	var nullStrQuoted null.ByteSlice
 	err = json.Unmarshal([]byte(`"null"`), &nullStrQuoted)
-	fatalIf(t, err, FileLine())
+	require.NoError(err)
 	// Skip checking what this decoded to; it's garbage.
 
 	// Successful Null Parses
 
-	var nullStr null.NullByteSlice
+	var nullStr null.ByteSlice
 	err = json.Unmarshal([]byte("null"), &nullStr)
-	fatalIf(t, err, FileLine())
-	assertNullByteSlice(t, nullStr, FileLine())
+	require.NoError(err)
+	require.False(nullStr.Valid)
 
 	// Unsuccessful Parses
 	// TODO: make types for type mismatches on parsing, and check that the
 	// correct error type is being returned here.
 
-	var badType null.NullByteSlice
+	var badType null.ByteSlice
 	// Ints are never byte slices.
-	err = json.Unmarshal(intJSON, &badType)
-	fatalUnless(t, err, FileLine())
+	err = json.Unmarshal([]byte("12345"), &badType)
+	require.Error(err)
 
-	var invalid null.NullByteSlice
-	err = invalid.UnmarshalJSON(invalidJSON)
+	var invalid null.ByteSlice
+	err = invalid.UnmarshalJSON([]byte(":->"))
 	if _, ok := err.(*json.SyntaxError); !ok {
-		t.Fatalf("expected json.SyntaxError, not %T", err)
+		require.FailNowf(
+			"Unexpected Error Type",
+			"expected *json.SyntaxError, not %T", err)
 	}
 }
 
 func TestByteSliceMarshalMapValue(t *testing.T) {
-	wrapper := struct{ Slice null.NullByteSlice }{null.ByteSlice(byteSliceValue)}
-	data, err := maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Slice": byteSliceValue}, FileLine())
-	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Slice": byteSliceValue}, FileLine())
+	require := require.New(t)
+	type Wrapper struct{ Slice null.ByteSlice }
+	var wrapper Wrapper
+	var data map[string]interface{}
+	var err error
 
-	wrapper = struct{ Slice null.NullByteSlice }{null.ByteSlice([]byte{})}
+	wrapper = Wrapper{null.NewByteSlice([]byte("DAICON V"))}
 	data, err = maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Slice": []byte{}}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Slice": base64ed("DAICON V")}, data)
 	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Slice": []byte{}}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Slice": base64ed("DAICON V")}, data)
+
+	wrapper = Wrapper{null.NewByteSlice([]byte{})}
+	data, err = maps.Marshal(wrapper)
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Slice": []byte{}}, data)
+	data, err = maps.Marshal(&wrapper)
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Slice": []byte{}}, data)
 
 	// Null NullByteSlices should be encoded as "nil"
-	wrapper = struct{ Slice null.NullByteSlice }{null.NullByteSlice{}}
+	wrapper = Wrapper{null.ByteSlice{}}
 	data, err = maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Slice": nil}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Slice": nil}, data)
 	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Slice": nil}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Slice": nil}, data)
 }
