@@ -1,278 +1,269 @@
 package null_test
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"testing"
 
 	"github.com/pyrrho/encoding/maps"
 	"github.com/pyrrho/encoding/types/null"
+	"github.com/stretchr/testify/require"
 )
 
-// Helper Functions
+func TestBoolCtors(t *testing.T) {
+	require := require.New(t)
 
-func assertBool(t *testing.T, expected bool, b null.NullBool, fileLine string) {
-	if !b.Valid {
-		t.Fatalf("%s: NullBool is null, but should be valid", fileLine)
-	}
-	if expected != b.Bool {
-		t.Fatalf("%s: %v ≠ %v", fileLine, expected, b.Bool)
-	}
-}
+	// null.NullBool() returns a new null null.Bool.
+	// This is equivalent to null.Bool{}.
+	nul := null.NullBool()
+	require.False(nul.Valid)
 
-func assertNullBool(t *testing.T, b null.NullBool, fileLine string) {
-	if b.Valid {
-		t.Fatalf("%s: NullBool is valid, but should be null", fileLine)
-	}
-}
+	empty := null.Bool{}
+	require.False(empty.Valid)
 
-// Tests
+	// null.NewBool constructs a new, valid null.Bool.
+	tr := null.NewBool(true)
+	require.True(tr.Valid)
+	require.Equal(true, tr.Bool)
 
-func TestBoolFrom(t *testing.T) {
-	assertBool(t, true, null.BoolFrom(true), FileLine())
-	assertBool(t, false, null.BoolFrom(false), FileLine())
-}
-
-func TestBoolFromPtr(t *testing.T) {
-	tr := true
-	fl := false
-
-	assertBool(t, true, null.BoolFromPtr(&tr), FileLine())
-	assertBool(t, false, null.BoolFromPtr(&fl), FileLine())
-
-	assertNullBool(t, null.BoolFromPtr(nil), FileLine())
-}
-
-func TestBoolCtor(t *testing.T) {
-	tr := true
-	var nilPtr *bool
-
-	assertBool(t, true, null.Bool(true), FileLine())
-	assertBool(t, false, null.Bool(false), FileLine())
-	assertBool(t, tr, null.Bool(tr), FileLine())
-	assertBool(t, tr, null.Bool(&tr), FileLine())
-	assertNullBool(t, null.Bool(nil), FileLine())
-	assertNullBool(t, null.Bool(nilPtr), FileLine())
-}
-
-func TestFailureNewBoolFromInt(t *testing.T) {
-	defer ShouldPanic(t, FileLine())
-	_ = null.Bool(0)
-}
-
-func TestFailureNewBoolFromString(t *testing.T) {
-	defer ShouldPanic(t, FileLine())
-	_ = null.Bool("false")
+	fl := null.NewBool(false)
+	require.True(fl.Valid)
+	require.Equal(false, fl.Bool)
 }
 
 func TestBoolValueOrZero(t *testing.T) {
-	valid := null.Bool(true)
-	if valid.ValueOrZero() != true {
-		t.Fatalf("unexpected ValueOrZero, %v ≠ %v", true, valid.ValueOrZero())
-	}
+	require := require.New(t)
 
-	nul := null.NullBool{}
-	if nul.ValueOrZero() != false {
-		t.Fatalf("unexpected ValueOrZero, %v ≠ %v", false, nul.ValueOrZero())
-	}
+	valid := null.NewBool(true)
+	require.Equal(true, valid.ValueOrZero())
+
+	nul := null.Bool{}
+	require.Equal(false, nul.ValueOrZero())
 }
-
-func TestBoolPtr(t *testing.T) {
-	b := null.Bool(true)
-	ptr := b.Ptr()
-	if *ptr != true {
-		t.Fatalf("bad %s bool: %#v ≠ %v\n", "pointer", ptr, true)
-	}
-
-	nul := null.NullBool{}
-	ptr = nul.Ptr()
-	if ptr != nil {
-		t.Fatalf("bad %s bool: %#v ≠ %s\n", "nil pointer", ptr, "nil")
-	}
-}
-
 func TestBoolSet(t *testing.T) {
-	b := null.NullBool{}
-	assertNullBool(t, b, FileLine())
+	require := require.New(t)
+
+	b := null.Bool{}
+	require.False(b.Valid)
+
 	b.Set(true)
-	assertBool(t, true, b, FileLine())
+	require.True(b.Valid)
+	require.Equal(true, b.Bool)
+
 	b.Set(false)
-	assertBool(t, false, b, FileLine())
+	require.True(b.Valid)
+	require.Equal(false, b.Bool)
 }
 
 func TestBoolNull(t *testing.T) {
-	b := null.Bool(true)
-	assertBool(t, true, b, FileLine())
+	require := require.New(t)
+
+	b := null.NewBool(true)
+
 	b.Null()
-	assertNullBool(t, b, FileLine())
+	require.False(b.Valid)
 }
 
 func TestBoolIsNil(t *testing.T) {
-	a := null.Bool(true)
-	if a.IsNil() {
-		t.Fatal("NullBool{true, true}.IsNil() should be false")
-	}
-	b := null.Bool(false)
-	if b.IsNil() {
-		t.Fatal("NullBool{false, true}.IsNil() should be false")
-	}
-	nul := null.NullBool{}
-	if !nul.IsNil() {
-		t.Fatal("NullBool{false, false}.IsNil() should be true")
-	}
+	require := require.New(t)
+
+	tr := null.NewBool(true)
+	require.False(tr.IsNil())
+
+	fl := null.NewBool(false)
+	require.False(fl.IsNil())
+
+	nul := null.Bool{}
+	require.True(nul.IsNil())
 }
 
 func TestBoolIsZero(t *testing.T) {
-	a := null.Bool(true)
-	if a.IsZero() {
-		t.Fatal("NullBool{true, true}.IsZero() should be false")
-	}
-	b := null.Bool(false)
-	if !b.IsZero() {
-		t.Fatal("NullBool{false, true}.IsZero() should be true")
-	}
-	nul := null.NullBool{}
-	if !nul.IsZero() {
-		t.Fatal("NullBool{false, false}.IsZero() should be true")
-	}
+	require := require.New(t)
+
+	tr := null.NewBool(true)
+	require.False(tr.IsZero())
+
+	fl := null.NewBool(false)
+	require.True(fl.IsZero())
+
+	nul := null.Bool{}
+	require.True(nul.IsZero())
 }
 
 func TestBoolSQLValue(t *testing.T) {
-	b := null.Bool(true)
-	val, err := b.Value()
-	fatalIf(t, err, FileLine())
-	if true != val.(bool) {
-		t.Fatalf("NullBool{true, true}.Value() should return a valid driver.Value (bool)")
-	}
+	require := require.New(t)
+	var val driver.Value
+	var err error
 
-	nul := null.NullBool{}
+	tr := null.NewBool(true)
+	val, err = tr.Value()
+	require.NoError(err)
+	require.Equal(true, val)
+
+	fl := null.NewBool(false)
+	val, err = fl.Value()
+	require.NoError(err)
+	require.Equal(false, val)
+
+	nul := null.Bool{}
 	val, err = nul.Value()
-	fatalIf(t, err, FileLine())
-	if nil != val {
-		t.Fatalf("NullBool{false, false}.Value() should return a nil driver.Value")
-	}
+	require.NoError(err)
+	require.Equal(nil, val)
 }
 
 func TestBoolSQLScan(t *testing.T) {
-	var b null.NullBool
-	err := b.Scan(true)
-	fatalIf(t, err, FileLine())
-	assertBool(t, true, b, FileLine())
+	require := require.New(t)
+	var err error
 
-	var nul null.NullBool
+	var tr null.Bool
+	err = tr.Scan(true)
+	require.NoError(err)
+	require.True(tr.Valid)
+	require.Equal(true, tr.Bool)
+
+	var fl null.Bool
+	err = fl.Scan(false)
+	require.NoError(err)
+	require.True(fl.Valid)
+	require.Equal(false, fl.Bool)
+
+	var nul null.Bool
 	err = nul.Scan(nil)
-	fatalIf(t, err, FileLine())
-	assertNullBool(t, nul, FileLine())
+	require.NoError(err)
+	require.False(nul.Valid)
 
-	var wrong null.NullBool
+	var wrong null.Bool
 	err = wrong.Scan(int64(42))
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 }
 
 func TestBoolMarshalJSON(t *testing.T) {
-	b := null.Bool(true)
-	data, err := json.Marshal(b)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "true", FileLine())
-	data, err = json.Marshal(&b)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "true", FileLine())
+	require := require.New(t)
+	var data []byte
+	var err error
 
-	zero := null.Bool(false)
+	b := null.NewBool(true)
+	data, err = json.Marshal(b)
+	require.NoError(err)
+	require.EqualValues("true", data)
+	data, err = json.Marshal(&b)
+	require.NoError(err)
+	require.EqualValues("true", data)
+
+	zero := null.NewBool(false)
 	data, err = json.Marshal(zero)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "false", FileLine())
+	require.NoError(err)
+	require.EqualValues("false", data)
 	data, err = json.Marshal(&zero)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "false", FileLine())
+	require.NoError(err)
+	require.EqualValues("false", data)
 
 	// Null NullBools should be encoded as "null"
-	nul := null.NullBool{}
+	nul := null.Bool{}
 	data, err = json.Marshal(nul)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "null", FileLine())
+	require.NoError(err)
+	require.EqualValues("null", data)
 	data, err = json.Marshal(&nul)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "null", FileLine())
+	require.NoError(err)
+	require.EqualValues("null", data)
 
 	wrapper := struct {
-		Foo null.NullBool
-		Bar null.NullBool
+		Foo null.Bool
+		Bar null.Bool
 	}{
-		null.Bool(true),
-		null.NullBool{},
+		null.NewBool(true),
+		null.Bool{},
 	}
 	data, err = json.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, `{"Foo":true,"Bar":null}`, FileLine())
+	require.NoError(err)
+	require.EqualValues(`{"Foo":true,"Bar":null}`, data)
 	data, err = json.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, `{"Foo":true,"Bar":null}`, FileLine())
+	require.NoError(err)
+	require.EqualValues(`{"Foo":true,"Bar":null}`, data)
 }
 
 func TestBoolUnmarshalJSON(t *testing.T) {
+	require := require.New(t)
+	var err error
+
 	// Successful Valid Parses
 
-	var b null.NullBool
-	err := json.Unmarshal(boolTrueJSON, &b)
-	fatalIf(t, err, FileLine())
-	assertBool(t, true, b, FileLine())
+	var tr null.Bool
+	err = json.Unmarshal([]byte("true"), &tr)
+	require.NoError(err)
+	require.True(tr.Valid)
+	require.Equal(true, tr.Bool)
+
+	var fl null.Bool
+	err = json.Unmarshal([]byte("false"), &fl)
+	require.NoError(err)
+	require.True(fl.Valid)
+	require.Equal(false, fl.Bool)
 
 	// Successful Null Parses
 
-	var nul null.NullBool
+	var nul null.Bool
 	err = json.Unmarshal([]byte("null"), &nul)
-	fatalIf(t, err, FileLine())
-	assertNullBool(t, nul, FileLine())
+	require.NoError(err)
+	require.False(nul.Valid)
 
 	// Unsuccessful Parses
 	// TODO: make types for type mismatches on parsing, and check that the
 	// correct error type is being returned here.
 
-	var str null.NullBool
+	var str null.Bool
 	// Booleans wrapped in quotes aren't booleans.
-	err = json.Unmarshal(boolStringJSON, &str)
-	fatalUnless(t, err, FileLine())
+	err = json.Unmarshal([]byte(`"true"`), &str)
+	require.Error(err)
 
-	var empty null.NullBool
+	var empty null.Bool
 	// An empty string is not a boolean.
 	err = json.Unmarshal([]byte(`""`), &empty)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 
-	var badType null.NullBool
+	var badType null.Bool
 	// Ints are never booleans.
 	err = json.Unmarshal([]byte("1"), &badType)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 
-	var invalid null.NullBool
-	err = invalid.UnmarshalJSON(invalidJSON)
+	var invalid null.Bool
+	err = invalid.UnmarshalJSON([]byte(":->"))
 	if _, ok := err.(*json.SyntaxError); !ok {
-		t.Fatalf("expected json.SyntaxError, not %T", err)
+		require.FailNowf(
+			"Unexpected Error Type",
+			"expected *json.SyntaxError, not %T", err)
 	}
 }
 
 func TestBoolMarshalMapValue(t *testing.T) {
-	wrapper := struct{ Bool null.NullBool }{null.Bool(true)}
-	data, err := maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Bool": true}, FileLine())
-	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Bool": true}, FileLine())
+	require := require.New(t)
+	type Wrapper struct{ Bool null.Bool }
+	var wrapper Wrapper
+	var data map[string]interface{}
+	var err error
 
-	wrapper = struct{ Bool null.NullBool }{null.Bool(false)}
+	wrapper = Wrapper{null.NewBool(true)}
 	data, err = maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Bool": false}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Bool": true}, data)
 	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Bool": false}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Bool": true}, data)
+
+	wrapper = Wrapper{null.NewBool(false)}
+	data, err = maps.Marshal(wrapper)
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Bool": false}, data)
+	data, err = maps.Marshal(&wrapper)
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Bool": false}, data)
 
 	// Null NullBools should be encoded as "nil"
-	wrapper = struct{ Bool null.NullBool }{null.NullBool{}}
+	wrapper = Wrapper{null.Bool{}}
 	data, err = maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Bool": nil}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Bool": nil}, data)
 	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Bool": nil}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Bool": nil}, data)
 }
