@@ -120,11 +120,8 @@ func (i NullInt64) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements the encoding/json Unmarshaler interface. It will
 // decode a given []byte into this NullInt64, so long as the provided []byte is
-// a valid JSON representation of an int or a null.
-//
-// Empty strings and 'null' will both decode into a null NullInt64. JSON objects
-// in the form of '{"Int64":<int>,"Valid":<bool>}' will decode directly into
-// this NullInt64.
+// a valid JSON representation of an int. The 'null' keyword will decode into a
+// null NullInt64.
 //
 // If the decode fails, the value of this NullInt64 will be unchanged.
 func (i *NullInt64) UnmarshalJSON(data []byte) error {
@@ -138,7 +135,8 @@ func (i *NullInt64) UnmarshalJSON(data []byte) error {
 	switch val := j.(type) {
 	case float64:
 		// Perform a second unmarshal, this time into an int64. This give the
-		// JSON parse a change to meaningfully fail (eg. if val is a float).
+		// JSON parse a chance to meaningfully fail (eg. if the conversion from
+		// float to integer will result in a loss of precision).
 		var tmp int64
 		err := json.Unmarshal(data, &tmp)
 		if err != nil {
@@ -147,20 +145,6 @@ func (i *NullInt64) UnmarshalJSON(data []byte) error {
 		i.Int64 = tmp
 		i.Valid = true
 		return nil
-	case string:
-		tmp, err := strconv.ParseInt(val, 10, 64)
-		if err != nil {
-			return err
-		}
-		i.Int64 = tmp
-		i.Valid = true
-		return nil
-	case map[string]interface{}:
-		// If we've received a JSON object, try to decode it directly into our
-		// sql.NullInt64. Return any errors that occur.
-		// TODO: Make sure this, if `data` is malformed, can't affect the value
-		//       of this NullInt64.
-		return json.Unmarshal(data, &i.NullInt64)
 	case nil:
 		i.Int64 = 0
 		i.Valid = false

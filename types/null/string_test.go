@@ -224,27 +224,12 @@ func TestStringUnmarshalJSON(t *testing.T) {
 	fatalIf(t, err, FileLine())
 	assertString(t, "null", nullStr, FileLine())
 
-	var validObj null.NullString
-	err = json.Unmarshal(validStringJSONObj, &validObj)
-	fatalIf(t, err, FileLine())
-	assertString(t, "test", validObj, FileLine())
-
-	var validButEmptyObj null.NullString
-	err = json.Unmarshal(validButEmptyStringJSONObj, &validButEmptyObj)
-	fatalIf(t, err, FileLine())
-	assertString(t, "", validButEmptyObj, FileLine())
-
 	// Successful Null Parses
 
 	var nul null.NullString
 	err = json.Unmarshal([]byte("null"), &nul)
 	fatalIf(t, err, FileLine())
 	assertNullString(t, nul, FileLine())
-
-	var nullObj null.NullString
-	err = json.Unmarshal(nullStringJSONObj, &nullObj)
-	fatalIf(t, err, FileLine())
-	assertNullString(t, nullObj, FileLine())
 
 	// Unsuccessful Parses
 	// TODO: make types for type mismatches on parsing, and check that the

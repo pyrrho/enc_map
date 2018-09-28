@@ -217,22 +217,12 @@ func TestBoolUnmarshalJSON(t *testing.T) {
 	fatalIf(t, err, FileLine())
 	assertBool(t, true, b, FileLine())
 
-	var validObj null.NullBool
-	err = json.Unmarshal(validBoolJSONObj, &validObj)
-	fatalIf(t, err, FileLine())
-	assertBool(t, true, validObj, FileLine())
-
 	// Successful Null Parses
 
 	var nul null.NullBool
 	err = json.Unmarshal([]byte("null"), &nul)
 	fatalIf(t, err, FileLine())
 	assertNullBool(t, nul, FileLine())
-
-	var nullObj null.NullBool
-	err = json.Unmarshal(nullBoolJSONObj, &nullObj)
-	fatalIf(t, err, FileLine())
-	assertNullBool(t, nullObj, FileLine())
 
 	// Unsuccessful Parses
 	// TODO: make types for type mismatches on parsing, and check that the

@@ -193,14 +193,8 @@ func (b NullByteSlice) MarshalJSON() ([]byte, error) {
 // is a valid base64 encoded string or a null.
 //
 // An empty string will result in a valid-but-empty NullByteSlice. The keyword
-// 'null' will result in a null NullByteSlice. JSON objects in the form of
-// '{"ByteSlice":<string|null>,"Valid":<bool>`}' will decode directly into this
-// NullByteSlice. If "ByteSlice" maps to a string, it will be base64 decoded
-// (assuming it is not zero-length). If "ByteSlice" maps to null, "Valid" must
-// be false or an error will be produced; valid-but-empty NullByteSlices are
-// allowed, valid-but-nil NullByteSlices are not. The string '"null"' is
-// considered to be a string -- not a keyword -- and will result in
-// base64-decoded garbage.
+// 'null' will result in a null NullByteSlice. The string '"null"' is considered
+// to be a string -- not a keyword -- and will result in base64-decoded garbage.
 //
 // If the decode fails, the value of this NullByteSlice will be unchanged.
 func (b *NullByteSlice) UnmarshalJSON(data []byte) error {
@@ -221,49 +215,13 @@ func (b *NullByteSlice) UnmarshalJSON(data []byte) error {
 			return nil
 		}
 		// Call json.Unmarshal again, this time with a []byte as the dest. This
-		// will cause encoding/json package to take care of the base64-decoding.
+		// lets encoding/json package take care of the base64-decoding.
 		var tmp []byte
 		err := json.Unmarshal(data, &tmp)
 		if err != nil {
 			return err
 		}
 		b.ByteSlice = tmp
-		b.Valid = true
-		return nil
-	case map[string]interface{}:
-		var (
-			bs, bsExists     = val["ByteSlice"]
-			bsIsNil          = bsExists && bs == nil
-			bsAsStr, bsIsStr = bs.(string)
-			bsOK             = bsIsNil || bsIsStr
-			valid, validOK   = val["Valid"].(bool)
-		)
-		if !(bsOK && validOK) {
-			return fmt.Errorf(
-				`null.NullByteSlice: unmarshalling JSON object requires key `+
-					`"ByteSlice" to be of type string or nil, and key "Valid" `+
-					`to be of type bool; found %T and %T, respectively`,
-				bs, valid,
-			)
-		}
-		if bsIsNil {
-			// If the value for "ByteSlice" is nil, life is easy ...
-			b.ByteSlice = nil
-			b.Valid = valid
-			return nil
-		} else if len(bsAsStr) == 0 {
-			// ... similarly, if the value is of zero length ...
-			b.ByteSlice = []byte{}
-			b.Valid = true
-			return nil
-		}
-		// ... otherwise we have to base64 decode the string.
-		tmp := make([]byte, base64.StdEncoding.DecodedLen(len(bsAsStr)))
-		n, err := base64.StdEncoding.Decode(tmp, []byte(bsAsStr))
-		if err != nil {
-			return err
-		}
-		b.ByteSlice = tmp[:n]
 		b.Valid = true
 		return nil
 	case nil:

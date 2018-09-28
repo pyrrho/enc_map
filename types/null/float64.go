@@ -140,11 +140,8 @@ func (f NullFloat64) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements the encoding/json Unmarshaler interface. It will
 // decode a given []byte into this NullFloat64, so long as the provided []byte
-// is a valid JSON representation of a float or a null.
-//
-// Empty strings and 'null' will both decode into a null NullFloat64. JSON
-// objects in the form of '{"Float64":<float>,"Valid":<bool>}' will decode
-// directly into this NullFloat64.
+// is a valid JSON representation of a float. The 'null' keyword will decode
+// into a null NullFloat64.
 //
 // If the decode fails, the value of this NullFloat64 will be unchanged.
 func (f *NullFloat64) UnmarshalJSON(data []byte) error {
@@ -160,12 +157,6 @@ func (f *NullFloat64) UnmarshalJSON(data []byte) error {
 		f.Float64 = val
 		f.Valid = true
 		return nil
-	case map[string]interface{}:
-		// If we've received a JSON object, try to decode it directly into our
-		// sql.NullBool. Return any errors that occur.
-		// TODO: Make sure this, if `data` is malformed, can't affect the value
-		//       of this NullBool.
-		return json.Unmarshal(data, &f.NullFloat64)
 	case nil:
 		f.Float64 = 0
 		f.Valid = false

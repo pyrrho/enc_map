@@ -242,11 +242,6 @@ func TestTimeUnmarshalJSON(t *testing.T) {
 	fatalIf(t, err, FileLine())
 	assertTime(t, zeroTimeValue, zero, FileLine())
 
-	var validObj null.NullTime
-	err = json.Unmarshal(validTimeJSONObj, &validObj)
-	fatalIf(t, err, FileLine())
-	assertTime(t, timeValue, validObj, FileLine())
-
 	// Successful Null Parses
 
 	var nul null.NullTime
@@ -254,10 +249,10 @@ func TestTimeUnmarshalJSON(t *testing.T) {
 	fatalIf(t, err, FileLine())
 	assertNullTime(t, nul, FileLine())
 
-	var nullObj null.NullTime
-	err = json.Unmarshal(nullTimeJSONObj, &nullObj)
+	var quotes null.NullTime
+	err = json.Unmarshal([]byte(`""`), &quotes)
 	fatalIf(t, err, FileLine())
-	assertNullTime(t, nullObj, FileLine())
+	assertNullTime(t, nul, FileLine())
 
 	// Unsuccessful Parses
 	// TODO: make types for type mismatches on parsing, and check that the
@@ -269,10 +264,6 @@ func TestTimeUnmarshalJSON(t *testing.T) {
 
 	var empty null.NullTime
 	err = json.Unmarshal([]byte(""), &empty)
-	fatalUnless(t, err, FileLine())
-
-	var quotes null.NullTime
-	err = json.Unmarshal([]byte(`""`), &quotes)
 	fatalUnless(t, err, FileLine())
 
 	var invalid null.NullTime

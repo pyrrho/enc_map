@@ -115,10 +115,8 @@ func (s NullString) MarshalJSON() ([]byte, error) {
 // is a valid JSON string or a null.
 //
 // An empty string will result in a valid-but-empty NullString. The keyword
-// 'null' will result in a null NullString. JSON objects in the form of
-// '{"String":<string>,"Valid":<bool>`}' will decode directly into this
-// NullString. The string '"null"' is considered to be a string -- not a keyword
-// -- and will result in a valid NullString.
+// 'null' will result in a null NullString. The string '"null"' is considered
+// to be a string -- not a keyword -- and will result in a valid NullString.
 //
 // If the decode fails, the value of this NullString will be unchanged.
 func (s *NullString) UnmarshalJSON(data []byte) error {
@@ -134,8 +132,6 @@ func (s *NullString) UnmarshalJSON(data []byte) error {
 		s.String = val
 		s.Valid = true
 		return nil
-	case map[string]interface{}:
-		return json.Unmarshal(data, &s.NullString)
 	case nil:
 		s.String = ""
 		s.Valid = false

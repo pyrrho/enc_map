@@ -259,22 +259,12 @@ func TestFloat64UnmarshalJSON(t *testing.T) {
 	fatalIf(t, err, FileLine())
 	assertFloat64(t, 12345, i, FileLine())
 
-	var validObj null.NullFloat64
-	err = json.Unmarshal(validFloatJSONObj, &validObj)
-	fatalIf(t, err, FileLine())
-	assertFloat64(t, 1.2345, validObj, FileLine())
-
 	// Successful Null Parses
 
 	var nul null.NullFloat64
 	err = json.Unmarshal([]byte("null"), &nul)
 	fatalIf(t, err, FileLine())
 	assertNullFloat64(t, nul, FileLine())
-
-	var nullObj null.NullFloat64
-	err = json.Unmarshal(nullFloatJSONObj, &nullObj)
-	fatalIf(t, err, FileLine())
-	assertNullFloat64(t, nullObj, FileLine())
 
 	// Unsuccessful Parses
 	// TODO: make types for type mismatches on parsing, and check that the

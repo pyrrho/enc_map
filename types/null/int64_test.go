@@ -225,22 +225,12 @@ func TestInt64UnmarshalJSON(t *testing.T) {
 	fatalIf(t, err, FileLine())
 	assertInt64(t, 12345, i, FileLine())
 
-	var validObj null.NullInt64
-	err = json.Unmarshal(validIntJSONObj, &validObj)
-	fatalIf(t, err, FileLine())
-	assertInt64(t, 12345, validObj, FileLine())
-
 	// Successful Null Parses
 
 	var nul null.NullInt64
 	err = json.Unmarshal([]byte("null"), &nul)
 	fatalIf(t, err, FileLine())
 	assertNullInt64(t, nul, FileLine())
-
-	var nullSQL null.NullInt64
-	err = json.Unmarshal(nullIntJSONObj, &nullSQL)
-	fatalIf(t, err, FileLine())
-	assertNullInt64(t, nullSQL, FileLine())
 
 	// Unsuccessful Parses
 	// TODO: make types for type mismatches on parsing, and check that the
@@ -249,7 +239,7 @@ func TestInt64UnmarshalJSON(t *testing.T) {
 	var intStr null.NullInt64
 	// Ints wrapped in quotes aren't ints.
 	err = json.Unmarshal(intStringJSON, &intStr)
-	fatalIf(t, err, FileLine())
+	fatalUnless(t, err, FileLine())
 
 	var empty null.NullInt64
 	err = json.Unmarshal([]byte(""), &empty)

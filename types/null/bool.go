@@ -125,10 +125,8 @@ func (b NullBool) MarshalJSON() ([]byte, error) {
 //
 // The keyword 'null' will result in a null NullBool. The keywords 'true' and
 // 'false' will result in a valid NullBool containing the value you would
-// expect. JSON objects in the form of '{"Bool":<bool>,"Valid":<bool>}' will
-// decode directly into this NullBool. The strings '"true"', '"false"',
-// '"null"', and `""` are considered to be strings -- not keywords -- and will
-// result in an error.
+// expect. The strings '"true"', '"false"', '"null"', and `""` are considered to
+// be strings -- not keywords -- and will result in an error.
 //
 // If the decode fails, the value of this NullBool will be unchanged.
 func (b *NullBool) UnmarshalJSON(data []byte) error {
@@ -144,12 +142,6 @@ func (b *NullBool) UnmarshalJSON(data []byte) error {
 		b.Bool = val
 		b.Valid = true
 		return nil
-	case map[string]interface{}:
-		// If we've received a JSON object, try to decode it directly into our
-		// sql.NullBool. Return any errors that occur.
-		// TODO: Make sure this, if `data` is malformed, can't affect the value
-		//       of this NullBool.
-		return json.Unmarshal(data, &b.NullBool)
 	case nil:
 		b.Bool = false
 		b.Valid = false

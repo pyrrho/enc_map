@@ -148,11 +148,8 @@ func (t NullTime) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements the encoding/json Unmarshaler interface. It will
 // decode a given []byte into this NullTime so long as the provided []byte
-// is a valid JSON representation of an RFC 3339 string or a null.
-//
-// Empty strings and 'null' will both decode into a null NullTime. JSON objects
-// objects in the form of '{"Time":<RFC 3339 string>,"Valid":<bool>}' will
-// decode directly into this NullTime.
+// is a valid JSON representation of an RFC 3339 string. Empty strings and
+// the 'null' keyword will both decode into a null NullTime.
 //
 // If the decode fails, the value of this NullTime will be unchanged.
 func (t *NullTime) UnmarshalJSON(data []byte) error {
@@ -165,6 +162,11 @@ func (t *NullTime) UnmarshalJSON(data []byte) error {
 	}
 	switch val := j.(type) {
 	case string:
+		if len(val) == 0 {
+			t.Time = time.Time{}
+			t.Valid = false
+			return nil
+		}
 		// TODO: If time.Time.UnmarshalJSON doesn't change the value of the
 		// receiver we could skip the temporary object by calling .UnmarshalJSON
 		// on t.Time.
@@ -174,31 +176,6 @@ func (t *NullTime) UnmarshalJSON(data []byte) error {
 		}
 		t.Time = tmp
 		t.Valid = true
-		return nil
-	case map[string]interface{}:
-		var (
-			ti, tiExists     = val["Time"]
-			tiIsNil          = tiExists && ti == nil
-			tiAsStr, tiIsStr = ti.(string)
-			tiOK             = tiIsNil || tiIsStr
-			valid, validOK   = val["Valid"].(bool)
-		)
-		if !(tiOK && validOK) {
-			return fmt.Errorf(
-				`null.NullTime: unmarshalling JSON object requires key "Time" `+
-					`to be of type string or nil, and key "Valid" to be of `+
-					`type bool; found %T and %T, respectively`,
-				ti, valid)
-		}
-		// TODO: If time.Time.UnmarshalJSON doesn't change the value of the
-		// receiver we could skip the temporary object by calling .UnmarshalJSON
-		// on t.Time.
-		tmp, err := time.Parse(time.RFC3339, tiAsStr)
-		if err != nil {
-			return err
-		}
-		t.Time = tmp
-		t.Valid = valid
 		return nil
 	case nil:
 		t.Time = time.Time{}

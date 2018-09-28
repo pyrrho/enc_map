@@ -37,22 +37,6 @@ var (
 	stringJSON      = []byte(`"test"`)
 	timeJSON        = []byte(`"2012-12-21T21:21:21Z"`)
 	zeroTimeJSON    = []byte(`"0001-01-01T00:00:00Z"`)
-
-	nullBoolJSONObj      = []byte(`{"Bool":false,"Valid":false}`)
-	nullByteSliceJSONObj = []byte(`{"ByteSlice":null,"Valid":false}`)
-	nullFloatJSONObj     = []byte(`{"Float64":0,"Valid":false}`)
-	nullIntJSONObj       = []byte(`{"Int64":0,"Valid":false}`)
-	nullStringJSONObj    = []byte(`{"String":"","Valid":false}`)
-	nullTimeJSONObj      = []byte(`{"Time":"0001-01-01T00:00:00Z","Valid":false}`)
-
-	validBoolJSONObj              = []byte(`{"Bool":true,"Valid":true}`)
-	validButEmptyByteSliceJSONObj = []byte(`{"ByteSlice":"","Valid":true}`)
-	validByteSliceJSONObj         = []byte(`{"ByteSlice":"REFJQ09OIFY=","Valid":true}`)
-	validFloatJSONObj             = []byte(`{"Float64":1.2345,"Valid":true}`)
-	validIntJSONObj               = []byte(`{"Int64":12345,"Valid":true}`)
-	validStringJSONObj            = []byte(`{"String":"test","Valid":true}`)
-	validButEmptyStringJSONObj    = []byte(`{"String":"","Valid":true}`)
-	validTimeJSONObj              = []byte(`{"Time":"2012-12-21T21:21:21Z","Valid":true}`)
 )
 
 func FileLine() string {

@@ -239,27 +239,12 @@ func TestByteSliceUnmarshalJSON(t *testing.T) {
 	fatalIf(t, err, FileLine())
 	// Skip checking what this decoded to; it's garbage.
 
-	var validObj null.NullByteSlice
-	err = json.Unmarshal(validByteSliceJSONObj, &validObj)
-	fatalIf(t, err, FileLine())
-	assertByteSlice(t, byteSliceValue, validObj, FileLine())
-
-	var validButEmpty null.NullByteSlice
-	err = json.Unmarshal(validButEmptyByteSliceJSONObj, &validButEmpty)
-	fatalIf(t, err, FileLine())
-	assertByteSlice(t, []byte(""), validButEmpty, FileLine())
-
 	// Successful Null Parses
 
 	var nullStr null.NullByteSlice
 	err = json.Unmarshal([]byte("null"), &nullStr)
 	fatalIf(t, err, FileLine())
 	assertNullByteSlice(t, nullStr, FileLine())
-
-	var nullObj null.NullByteSlice
-	err = json.Unmarshal(nullByteSliceJSONObj, &nullObj)
-	fatalIf(t, err, FileLine())
-	assertNullByteSlice(t, nullObj, FileLine())
 
 	// Unsuccessful Parses
 	// TODO: make types for type mismatches on parsing, and check that the
