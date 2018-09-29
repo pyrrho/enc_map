@@ -1,6 +1,7 @@
 package null_test
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"math"
 	"strconv"
@@ -8,297 +9,273 @@ import (
 
 	"github.com/pyrrho/encoding/maps"
 	"github.com/pyrrho/encoding/types/null"
+	"github.com/stretchr/testify/require"
 )
 
-// Helper Functions
+func TestInt64Ctors(t *testing.T) {
+	require := require.New(t)
 
-func assertInt64(t *testing.T, expected int64, b null.NullInt64, fileLine string) {
-	if !b.Valid {
-		t.Fatalf("%s: NullInt64 is null, but should be valid", fileLine)
-	}
-	if expected != b.Int64 {
-		t.Fatalf("%s: %v ≠ %v", fileLine, expected, b.Int64)
-	}
-}
+	// null.NullInt64() returns a new null null.Int64.
+	// This is equivalent to null.Int64{}.
+	nul := null.NullInt64()
+	require.False(nul.Valid)
 
-func assertNullInt64(t *testing.T, b null.NullInt64, fileLine string) {
-	if b.Valid {
-		t.Fatalf("%s: NullInt64 is valid, but should be null", fileLine)
-	}
-}
+	empty := null.Int64{}
+	require.False(empty.Valid)
 
-// Tests
+	// null.NewInt64 constructs a new, valid null.Int64.
+	i := null.NewInt64(12345)
+	require.True(i.Valid)
+	require.Equal(int64(12345), i.Int64)
 
-func TestInt64From(t *testing.T) {
-	assertInt64(t, 12345, null.Int64From(12345), FileLine())
-	assertInt64(t, 0, null.Int64From(0), FileLine())
-}
-
-func TestInt64FromPtr(t *testing.T) {
-	i := int64(12345)
-	z := int64(0)
-	assertInt64(t, 12345, null.Int64FromPtr(&i), FileLine())
-	assertInt64(t, 0, null.Int64FromPtr(&z), FileLine())
-
-	assertNullInt64(t, null.Int64FromPtr(nil), FileLine())
-}
-
-func TestNewInt64(t *testing.T) {
-	v := int64(12345)
-	var nilPtr *int64
-
-	assertInt64(t, 1, null.Int64(1), FileLine())
-	assertInt64(t, 0, null.Int64(0), FileLine())
-	assertInt64(t, v, null.Int64(v), FileLine())
-	assertInt64(t, v, null.Int64(&v), FileLine())
-	assertNullInt64(t, null.Int64(nil), FileLine())
-	assertNullInt64(t, null.Int64(nilPtr), FileLine())
-}
-
-func TestFailureNewInt64FromBool(t *testing.T) {
-	defer ShouldPanic(t, FileLine())
-	_ = null.Int64(true)
-}
-
-func TestFailureNewInt64FromFloat(t *testing.T) {
-	defer ShouldPanic(t, FileLine())
-	_ = null.Int64(4.2)
+	z := null.NewInt64(0)
+	require.True(z.Valid)
+	require.Equal(int64(0), z.Int64)
 }
 
 func TestInt64ValueOrZero(t *testing.T) {
-	valid := null.Int64(12345)
-	if valid.ValueOrZero() != 12345 {
-		t.Fatalf("unexpected ValueOrZero, %v ≠ %v", 12345, valid.ValueOrZero())
-	}
+	require := require.New(t)
 
-	nul := null.NullInt64{}
-	if nul.ValueOrZero() != 0 {
-		t.Fatalf("unexpected ValueOrZero, %v ≠ %v", 0, nul.ValueOrZero())
-	}
-}
+	valid := null.NewInt64(12345)
+	require.Equal(int64(12345), valid.Int64)
 
-func TestInt64Ptr(t *testing.T) {
-	i := null.Int64(12345)
-	ptr := i.Ptr()
-	if *ptr != 12345 {
-		t.Fatalf("bad %s int: %#v ≠ %d\n", "pointer", ptr, 12345)
-	}
-
-	nul := null.NullInt64{}
-	ptr = nul.Ptr()
-	if ptr != nil {
-		t.Fatalf("bad %s int: %#v ≠ %s\n", "nil pointer", ptr, "nil")
-	}
+	nul := null.Int64{}
+	require.Equal(int64(0), nul.Int64)
 }
 
 func TestInt64Set(t *testing.T) {
-	i := null.NullInt64{}
-	assertNullInt64(t, i, FileLine())
+	require := require.New(t)
+
+	i := null.Int64{}
+	require.False(i.Valid)
+
 	i.Set(12345)
-	assertInt64(t, 12345, i, FileLine())
+	require.True(i.Valid)
+	require.Equal(int64(12345), i.Int64)
+
 	i.Set(0)
-	assertInt64(t, 0, i, FileLine())
+	require.True(i.Valid)
+	require.Equal(int64(0), i.Int64)
 }
 
 func TestInt64Null(t *testing.T) {
-	i := null.Int64(12345)
-	assertInt64(t, 12345, i, FileLine())
+	require := require.New(t)
+
+	i := null.NewInt64(12345)
+
 	i.Null()
-	assertNullInt64(t, i, FileLine())
+	require.False(i.Valid)
 }
 
 func TestInt64IsNil(t *testing.T) {
-	i := null.Int64(12345)
-	if i.IsNil() {
-		t.Fatalf("IsNil() should be false")
-	}
-	zero := null.Int64(0)
-	if zero.IsNil() {
-		t.Fatalf("IsNil() should be false")
-	}
-	nul := null.NullInt64{}
-	if !nul.IsNil() {
-		t.Fatalf("IsNil() should be true")
-	}
+	require := require.New(t)
+
+	i := null.NewInt64(12345)
+	require.False(i.IsNil())
+
+	z := null.NewInt64(0)
+	require.False(z.IsNil())
+
+	nul := null.Int64{}
+	require.True(nul.IsNil())
 }
 
 func TestInt64IsZero(t *testing.T) {
-	i := null.Int64(12345)
-	if i.IsZero() {
-		t.Fatalf("IsZero() should be false")
-	}
-	zero := null.Int64(0)
-	if !zero.IsZero() {
-		t.Fatalf("IsZero() should be true")
-	}
-	nul := null.NullInt64{}
-	if !nul.IsZero() {
-		t.Fatalf("IsZero() should be true")
-	}
+	require := require.New(t)
+
+	i := null.NewInt64(12345)
+	require.False(i.IsZero())
+
+	z := null.NewInt64(0)
+	require.True(z.IsZero())
+
+	nul := null.Int64{}
+	require.True(nul.IsZero())
 }
 
 func TestInt64SQLValue(t *testing.T) {
-	i := null.Int64(12345)
-	val, err := i.Value()
-	fatalIf(t, err, FileLine())
-	if 12345 != val.(int64) {
-		t.Fatalf("NullInt64{12345, true}.Value() should return a valid driver.Value (int64)")
-	}
+	require := require.New(t)
+	var val driver.Value
+	var err error
 
-	zero := null.Int64(0)
-	val, err = zero.Value()
-	fatalIf(t, err, FileLine())
-	if 0 != val.(int64) {
-		t.Fatalf("NullInt64{0, true}.Value() should return a valid driver.Value (int64)")
-	}
+	i := null.NewInt64(12345)
+	val, err = i.Value()
+	require.NoError(err)
+	require.Equal(int64(12345), val)
 
-	nul := null.NullInt64{}
+	z := null.NewInt64(0)
+	val, err = z.Value()
+	require.NoError(err)
+	require.Equal(int64(0), val)
+
+	nul := null.Int64{}
 	val, err = nul.Value()
-	fatalIf(t, err, FileLine())
-	if nil != val {
-		t.Fatalf("NullInt64{..., false}.Value() should return a nil driver.Value")
-	}
+	require.NoError(err)
+	require.Equal(nil, val)
 }
 
 func TestInt64SQLScan(t *testing.T) {
-	var i null.NullInt64
-	err := i.Scan(12345)
-	fatalIf(t, err, FileLine())
-	assertInt64(t, 12345, i, FileLine())
+	require := require.New(t)
+	var err error
 
-	var i64Str null.NullInt64
+	var i null.Int64
+	err = i.Scan(12345)
+	require.NoError(err)
+	require.True(i.Valid)
+	require.Equal(int64(12345), i.Int64)
+
+	var i64Str null.Int64
 	// NB. Scan will coerce strings, but UnmarshalJSON won't.
 	err = i64Str.Scan("12345")
-	fatalIf(t, err, FileLine())
-	assertInt64(t, 12345, i64Str, FileLine())
+	require.NoError(err)
+	require.True(i64Str.Valid)
+	require.Equal(int64(12345), i64Str.Int64)
 
-	var nul null.NullInt64
+	var nul null.Int64
 	err = nul.Scan(nil)
-	fatalIf(t, err, FileLine())
-	assertNullInt64(t, nul, FileLine())
+	require.NoError(err)
+	require.False(nul.Valid)
 
-	var wrong null.NullInt64
+	var wrong null.Int64
 	err = wrong.Scan("hello world")
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 
-	var f null.NullInt64
+	var f null.Int64
 	err = f.Scan(1.2345)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 
-	var b null.NullInt64
+	var b null.Int64
 	err = b.Scan(true)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 }
 
 func TestInt64MarshalJSON(t *testing.T) {
-	i := null.Int64From(12345)
-	data, err := json.Marshal(i)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "12345", FileLine())
+	require := require.New(t)
+	var data []byte
+	var err error
+
+	i := null.NewInt64(12345)
+	data, err = json.Marshal(i)
+	require.NoError(err)
+	require.EqualValues("12345", data)
 	data, err = json.Marshal(&i)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "12345", FileLine())
+	require.NoError(err)
+	require.EqualValues("12345", data)
 
-	zero := null.Int64(0)
-	data, err = json.Marshal(zero)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "0", FileLine())
-	data, err = json.Marshal(&zero)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "0", FileLine())
+	z := null.NewInt64(0)
+	data, err = json.Marshal(z)
+	require.NoError(err)
+	require.EqualValues("0", data)
+	data, err = json.Marshal(&z)
+	require.NoError(err)
+	require.EqualValues("0", data)
 
-	// Null Int64s should be encoded as 'null'
-	nul := null.NullInt64{}
+	nul := null.Int64{}
 	data, err = json.Marshal(nul)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "null", FileLine())
+	require.NoError(err)
+	require.EqualValues("null", data)
 	data, err = json.Marshal(&nul)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "null", FileLine())
+	require.NoError(err)
+	require.EqualValues("null", data)
 }
 
 func TestInt64UnmarshalJSON(t *testing.T) {
+	require := require.New(t)
+	var err error
+
 	// Successful Valid Parses
 
-	var i null.NullInt64
-	err := json.Unmarshal(intJSON, &i)
-	fatalIf(t, err, FileLine())
-	assertInt64(t, 12345, i, FileLine())
+	var i null.Int64
+	err = json.Unmarshal([]byte("12345"), &i)
+	require.NoError(err)
+	require.True(i.Valid)
+	require.Equal(int64(12345), i.Int64)
 
 	// Successful Null Parses
 
-	var nul null.NullInt64
+	var nul null.Int64
 	err = json.Unmarshal([]byte("null"), &nul)
-	fatalIf(t, err, FileLine())
-	assertNullInt64(t, nul, FileLine())
+	require.NoError(err)
+	require.False(nul.Valid)
 
 	// Unsuccessful Parses
 	// TODO: make types for type mismatches on parsing, and check that the
 	// correct error type is being returned here.
 
-	var intStr null.NullInt64
+	var intStr null.Int64
 	// Ints wrapped in quotes aren't ints.
-	err = json.Unmarshal(intStringJSON, &intStr)
-	fatalUnless(t, err, FileLine())
+	err = json.Unmarshal([]byte(`"12345"`), &intStr)
+	require.Error(err)
 
-	var empty null.NullInt64
+	var empty null.Int64
 	err = json.Unmarshal([]byte(""), &empty)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 
-	var quotes null.NullInt64
+	var quotes null.Int64
 	err = json.Unmarshal([]byte(`""`), &quotes)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 
-	var f null.NullInt64
+	var f null.Int64
 	// Non-integer numbers should not be coerced to ints.
-	err = json.Unmarshal(floatJSON, &f)
-	fatalUnless(t, err, FileLine())
+	err = json.Unmarshal([]byte("1.2345"), &f)
+	require.Error(err)
 
-	var invalid null.NullInt64
-	err = invalid.UnmarshalJSON(invalidJSON)
+	var invalid null.Int64
+	err = invalid.UnmarshalJSON([]byte(":->"))
 	if _, ok := err.(*json.SyntaxError); !ok {
-		t.Fatalf("expected json.SyntaxError, not %T", err)
+		require.FailNowf(
+			"Unexpected Error Type",
+			"expected *json.SyntaxError, not %T", err)
 	}
 }
 
 func TestInt64UnmarshalJSONOverflow(t *testing.T) {
+	require := require.New(t)
+	var err error
+
 	int64Overflow := uint64(math.MaxInt64)
 
 	// Max int64 should decode successfully
-	var i null.NullInt64
-	err := json.Unmarshal([]byte(strconv.FormatUint(int64Overflow, 10)), &i)
-	fatalIf(t, err, FileLine())
+	var i null.Int64
+	err = json.Unmarshal([]byte(strconv.FormatUint(int64Overflow, 10)), &i)
+	require.NoError(err)
 
 	// Attempt to overflow
 	int64Overflow++
 	err = json.Unmarshal([]byte(strconv.FormatUint(int64Overflow, 10)), &i)
 	// Decoded values should overflow int64
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 }
 
 func TestInt64MarshalMapValue(t *testing.T) {
-	wrapper := struct{ Int64 null.NullInt64 }{null.Int64(12345)}
-	data, err := maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Int64": int64(12345)}, FileLine())
-	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Int64": int64(12345)}, FileLine())
+	require := require.New(t)
+	type Wrapper struct{ Int64 null.Int64 }
+	var wrapper Wrapper
+	var data map[string]interface{}
+	var err error
 
-	wrapper = struct{ Int64 null.NullInt64 }{null.Int64(0)}
+	wrapper = Wrapper{null.NewInt64(12345)}
 	data, err = maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Int64": int64(0)}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Int64": int64(12345)}, data)
 	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Int64": int64(0)}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Int64": int64(12345)}, data)
+
+	wrapper = Wrapper{null.NewInt64(0)}
+	data, err = maps.Marshal(wrapper)
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Int64": int64(0)}, data)
+	data, err = maps.Marshal(&wrapper)
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Int64": int64(0)}, data)
 
 	// Null NullInt64s should be encoded as "nil"
-	wrapper = struct{ Int64 null.NullInt64 }{null.NullInt64{}}
+	wrapper = Wrapper{null.Int64{}}
 	data, err = maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Int64": nil}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Int64": nil}, data)
 	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Int64": nil}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Int64": nil}, data)
 }

@@ -7,90 +7,56 @@ import (
 	"strconv"
 )
 
-// NullInt64 is a wrapper around the database/sql NullInt64 type that implements
-// all of the encoding/type interfaces that sql.NullInt64 doesn't implement out
-// of the box.
+// Int64 is a wrapper around the database/sql NullInt64 type that implements all
+// of the pyrrho/encoding/types interfaces detailed in the package comments that
+// sql.NullInt64 doesn't implement out of the box.
 //
-// If the NullInt64 is valid and contains 0, it will be considered non-nil, and
-// zero.
-type NullInt64 struct {
+// If the Int64 is valid and contains 0, it will be considered non-nil, and of
+// zero value.
+type Int64 struct {
 	sql.NullInt64
 }
 
 // Constructors
 
-// Int64 creates a new NullInt64 based on the type and value of the given
-// interface. This function intentionally sacrafices compile-time safety for
-// developer convenience.
-//
-// If the interface is nil or a nil *Int64, the new NullInt64 will be null.
-//
-// If the interface is a int, an int64, or a non-nil *Int64, the new NullInt64
-// will be valid, and will be initialized with the (possibly dereferenced) value
-// of the interface.
-//
-// If the interface is any other type this function will panic.
-func Int64(i interface{}) NullInt64 {
-	switch v := i.(type) {
-	case int64:
-		return Int64From(v)
-	case *int64:
-		return Int64FromPtr(v)
-	case int:
-		return Int64From(int64(v))
-	case nil:
-		return NullInt64{}
-	}
-	panic(fmt.Errorf(
-		"null.NullInt64: invalid constructor argument; %#v of type %T "+
-			"is not of type int, int64, *int64, or nil", i, i))
+// NullInt64 constructs and returns a new null Int64.
+func NullInt64() Int64 {
+	return Int64{
+		sql.NullInt64{
+			Int64: 0,
+			Valid: false,
+		}}
 }
 
-// Int64From creates a valid NullInt64 from i.
-func Int64From(i int64) NullInt64 {
-	return NullInt64{sql.NullInt64{
-		Int64: i,
-		Valid: true,
-	}}
-}
-
-// Int64FromPtr creates a valid NullInt64 from *i.
-func Int64FromPtr(i *int64) NullInt64 {
-	if i == nil {
-		return NullInt64{}
-	}
-	return Int64From(*i)
+// NewInt64 constructs and returns a new, valid Int64 initialized with the value
+// of the given i.
+func NewInt64(i int64) Int64 {
+	return Int64{
+		sql.NullInt64{
+			Int64: i,
+			Valid: true,
+		}}
 }
 
 // Getters and Setters
 
-// ValueOrZero returns the value of this NullInt64 if it is valid; otherwise it
-// returns the zero value for a int64.
-func (i NullInt64) ValueOrZero() int64 {
+// ValueOrZero returns the value of i if it is valid; otherwise it returns the
+// zero value for a int64 (0).
+func (i Int64) ValueOrZero() int64 {
 	if !i.Valid {
 		return 0
 	}
 	return i.Int64
 }
 
-// Ptr returns a pointer to this NullInt64's value if it is valid; otherwise
-// returns a nil pointer. The captured pointer will be able to modify the value
-// of this NullInt64.
-func (i *NullInt64) Ptr() *int64 {
-	if !i.Valid {
-		return nil
-	}
-	return &i.Int64
-}
-
-// Set modifies the value stored in this NullInt64, and guarantees it is valid.
-func (i *NullInt64) Set(v int64) {
+// Set modifies the value stored in i, and guarantees it is valid.
+func (i *Int64) Set(v int64) {
 	i.Int64 = v
 	i.Valid = true
 }
 
-// Null marks this NullInt64 as null with no meaningful value.
-func (i *NullInt64) Null() {
+// Null marks i as null with no meaningful value.
+func (i *Int64) Null() {
 	i.Int64 = 0
 	i.Valid = false
 }
@@ -98,20 +64,20 @@ func (i *NullInt64) Null() {
 // Interfaces
 
 // IsNil implements the pyrrho/encoding IsNiler interface. It will return true
-// if this NullInt64 is null.
-func (i NullInt64) IsNil() bool {
+// if i is null.
+func (i Int64) IsNil() bool {
 	return !i.Valid
 }
 
 // IsZero implements the pyrrho/encoding IsZeroer interface. It will return true
-// if this NullInt64 is null or if its value is 0.
-func (i NullInt64) IsZero() bool {
+// if i is null or if its value is 0.
+func (i Int64) IsZero() bool {
 	return !i.Valid || i.Int64 == 0
 }
 
 // MarshalJSON implements the encoding/json Marshaler interface. It will encode
-// this NullInt64 into its JSON representation if valid, or 'null' otherwise.
-func (i NullInt64) MarshalJSON() ([]byte, error) {
+// i into its JSON representation if valid, or 'null' otherwise.
+func (i Int64) MarshalJSON() ([]byte, error) {
 	if !i.Valid {
 		return []byte("null"), nil
 	}
@@ -119,14 +85,13 @@ func (i NullInt64) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the encoding/json Unmarshaler interface. It will
-// decode a given []byte into this NullInt64, so long as the provided []byte is
-// a valid JSON representation of an int. The 'null' keyword will decode into a
-// null NullInt64.
+// decode a given []byte into i, so long as the provided []byte is a valid JSON
+// representation of an int. The 'null' keyword will decode into a null Int64.
 //
-// If the decode fails, the value of this NullInt64 will be unchanged.
-func (i *NullInt64) UnmarshalJSON(data []byte) error {
+// If the decode fails, the value of i will be unchanged.
+func (i *Int64) UnmarshalJSON(data []byte) error {
 	if i == nil {
-		return fmt.Errorf("null.NullInt64: UnmarshalJSON called on nil pointer")
+		return fmt.Errorf("null.Int64: UnmarshalJSON called on nil pointer")
 	}
 	var j interface{}
 	if err := json.Unmarshal(data, &j); err != nil {
@@ -150,15 +115,15 @@ func (i *NullInt64) UnmarshalJSON(data []byte) error {
 		i.Valid = false
 		return nil
 	default:
-		return fmt.Errorf("null.NullInt64: cannot unmarshal JSON of type %T (%v)",
+		return fmt.Errorf("null.Int64: cannot unmarshal JSON of type %T (%v)",
 			val, data)
 	}
 }
 
 // MarshalMapValue implements the pyrrho/encoding/maps Marshaler interface. It
-// will encode this NullInt64 into its interface{} representation for use in a
+// will encode i into its interface{} representation for use in a
 // map[string]interface{} if valid, or return nil otherwise.
-func (i NullInt64) MarshalMapValue() (interface{}, error) {
+func (i Int64) MarshalMapValue() (interface{}, error) {
 	if i.Valid {
 		return i.Int64, nil
 	}
