@@ -1,335 +1,307 @@
 package null_test
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"math"
 	"testing"
 
 	"github.com/pyrrho/encoding/maps"
 	"github.com/pyrrho/encoding/types/null"
+	"github.com/stretchr/testify/require"
 )
 
-// Helper Functions
+func TestFloat64Ctors(t *testing.T) {
+	require := require.New(t)
 
-func assertFloat64(t *testing.T, expected float64, f null.NullFloat64, fileLine string) {
-	if !f.Valid {
-		t.Fatalf("%s: NullFloat64 is null, but should be valid", fileLine)
-	}
-	if math.IsNaN(expected) {
-		if !math.IsNaN(f.Float64) {
-			t.Fatalf("%s: Expected NaN, received %v", fileLine, f.Float64)
-		}
-	} else if expected != f.Float64 {
-		t.Fatalf("%s: %v ≠ %v", fileLine, expected, f.Float64)
-	}
-}
+	// null.NullFloat64() returns a new null null.Float64.
+	// This is equivalent to null.Float64{}.
+	nul := null.NullFloat64()
+	require.False(nul.Valid)
 
-func assertNullFloat64(t *testing.T, f null.NullFloat64, fileLine string) {
-	if f.Valid {
-		t.Fatalf("%s: NullFloat64 is valid, but should be null", fileLine)
-	}
-}
+	empty := null.Float64{}
+	require.False(empty.Valid)
 
-// Tests
+	// null.NewFloat64 constructs a new, valid null.Float64.
+	f := null.NewFloat64(1.2345)
+	require.True(f.Valid)
+	require.Equal(1.2345, f.Float64)
 
-func TestFloat64From(t *testing.T) {
-	assertFloat64(t, 1.2345, null.Float64From(1.2345), FileLine())
-	assertFloat64(t, 4, null.Float64From(4), FileLine())
-	assertFloat64(t, 0, null.Float64From(0), FileLine())
-	assertFloat64(t, math.NaN(), null.Float64From(math.NaN()), FileLine())
-	assertFloat64(t, math.Inf(1), null.Float64From(math.Inf(1)), FileLine())
-}
+	i := null.NewFloat64(12345)
+	require.True(i.Valid)
+	require.Equal(float64(12345), i.Float64)
 
-func TestFloat64FromPtr(t *testing.T) {
-	a := float64(1.2345)
-	b := 0.0
-	assertFloat64(t, 1.2345, null.Float64FromPtr(&a), FileLine())
-	assertFloat64(t, 0.0, null.Float64FromPtr(&b), FileLine())
-
-	assertNullFloat64(t, null.Float64FromPtr(nil), FileLine())
-}
-
-func TestFloat64Ctor(t *testing.T) {
-	v := float64(1.2345)
-	var nilPtr *float64
-
-	assertFloat64(t, 1.2345, null.Float64(1.2345), FileLine())
-	assertFloat64(t, 0.0, null.Float64(0.0), FileLine())
-	assertFloat64(t, 7.0, null.Float64(7), FileLine())
-	assertFloat64(t, v, null.Float64(v), FileLine())
-	assertFloat64(t, v, null.Float64(&v), FileLine())
-	assertFloat64(t, math.NaN(), null.Float64(math.NaN()), FileLine())
-	assertFloat64(t, math.Inf(1), null.Float64(math.Inf(1)), FileLine())
-	assertNullFloat64(t, null.Float64(nil), FileLine())
-	assertNullFloat64(t, null.Float64(nilPtr), FileLine())
-}
-
-func TestFailureNewFloat64FromBool(t *testing.T) {
-	defer ShouldPanic(t, FileLine())
-	_ = null.Float64(true)
-}
-
-func TestFailureNewFloat64FromString(t *testing.T) {
-	defer ShouldPanic(t, FileLine())
-	_ = null.Float64("0")
+	z := null.NewFloat64(0)
+	require.True(z.Valid)
+	require.Equal(0.0, z.Float64)
 }
 
 func TestFloat64ValueOrZero(t *testing.T) {
-	valid := null.Float64(1.2345)
-	if valid.ValueOrZero() != 1.2345 {
-		t.Fatalf("unexpected ValueOrZero, %v ≠ %v", 1.2345, valid.ValueOrZero())
-	}
+	require := require.New(t)
 
-	nul := null.NullFloat64{}
-	if nul.ValueOrZero() != 0 {
-		t.Fatalf("unexpected ValueOrZero, %v ≠ %v", 0, nul.ValueOrZero())
-	}
-}
+	f := null.NewFloat64(1.2345)
+	require.Equal(1.2345, f.ValueOrZero())
 
-func TestFloat64Ptr(t *testing.T) {
-	f := null.Float64(1.2345)
-	ptr := f.Ptr()
-	if *ptr != 1.2345 {
-		t.Fatalf("bad %s float64: %#v ≠ %v\n", "pointer", ptr, 1.2345)
-	}
-	*ptr = 5.4321
-	if f.Float64 != 5.4321 {
-		t.Fatalf("bad %s float64: %#v ≠ %v\n", "pointer dereference", f.Float64, 5.4321)
-	}
+	i := null.NewFloat64(12345)
+	require.Equal(float64(12345), i.ValueOrZero())
 
-	nul := null.NullFloat64{}
-	ptr = nul.Ptr()
-	if ptr != nil {
-		t.Fatalf("bad %s float64: %#v ≠ %s\n", "nil pointer", ptr, "nil")
-	}
+	z := null.NewFloat64(0)
+	require.Equal(0.0, z.ValueOrZero())
+
+	nul := null.Float64{}
+	require.Equal(0.0, nul.ValueOrZero())
 }
 
 func TestFloat64Set(t *testing.T) {
-	f := null.NullFloat64{}
-	assertNullFloat64(t, f, FileLine())
+	require := require.New(t)
+
+	f := null.Float64{}
+	require.False(f.Valid)
+
 	f.Set(1.2345)
-	assertFloat64(t, 1.2345, f, FileLine())
+	require.True(f.Valid)
+	require.Equal(1.2345, f.Float64)
+
 	f.Set(0.0)
-	assertFloat64(t, 0.0, f, FileLine())
+	require.True(f.Valid)
+	require.Equal(0.0, f.Float64)
 }
 
 func TestFloat64Null(t *testing.T) {
-	f := null.Float64(1.2345)
-	assertFloat64(t, 1.2345, f, FileLine())
+	require := require.New(t)
+
+	f := null.NewFloat64(1.2345)
+
 	f.Null()
-	assertNullFloat64(t, f, FileLine())
+	require.False(f.Valid)
 }
 
 func TestFloat64IsNil(t *testing.T) {
-	f := null.Float64(1.2345)
-	if f.IsNil() {
-		t.Fatalf("IsNil() should be false")
-	}
-	zero := null.Float64(0)
-	if zero.IsNil() {
-		t.Fatalf("IsNil() should be false")
-	}
-	nul := null.NullFloat64{}
-	if !nul.IsNil() {
-		t.Fatalf("IsNil() should be true")
-	}
+	require := require.New(t)
+
+	f := null.NewFloat64(1.2345)
+	require.False(f.IsNil())
+
+	z := null.NewFloat64(0)
+	require.False(z.IsNil())
+
+	nul := null.Float64{}
+	require.True(nul.IsNil())
 }
 
 func TestFloat64IsZero(t *testing.T) {
-	f := null.Float64(1.2345)
-	if f.IsZero() {
-		t.Fatalf("IsZero() should be false")
-	}
-	zero := null.Float64(0)
-	if !zero.IsZero() {
-		t.Fatalf("IsZero() should be true")
-	}
-	nul := null.NullFloat64{}
-	if !nul.IsZero() {
-		t.Fatalf("IsZero() should be true")
-	}
+	require := require.New(t)
+
+	f := null.NewFloat64(1.2345)
+	require.False(f.IsZero())
+
+	z := null.NewFloat64(0)
+	require.True(z.IsZero())
+
+	nul := null.Float64{}
+	require.True(nul.IsZero())
 }
 
 func TestFloat64SQLValue(t *testing.T) {
-	f := null.Float64(1.2345)
-	val, err := f.Value()
-	fatalIf(t, err, FileLine())
-	if 1.2345 != val.(float64) {
-		t.Fatalf("NullFloat64{1.2345, true}.Value() should return a valid driver.Value (float64)")
-	}
+	require := require.New(t)
+	var val driver.Value
+	var err error
 
-	zero := null.Float64(0)
+	f := null.NewFloat64(1.2345)
+	val, err = f.Value()
+	require.NoError(err)
+	require.Equal(1.2345, val)
+
+	zero := null.NewFloat64(0)
 	val, err = zero.Value()
-	fatalIf(t, err, FileLine())
-	if 0 != val.(float64) {
-		t.Fatalf("NullFloat64{0, true}.Value() should return a valid driver.Value (float64)")
-	}
+	require.NoError(err)
+	require.Equal(0.0, val)
 
-	nul := null.NullFloat64{}
+	nul := null.Float64{}
 	val, err = nul.Value()
-	fatalIf(t, err, FileLine())
-	if nil != val {
-		t.Fatalf("NullFloat64{..., false}.Value() should return a nil driver.Value")
-	}
+	require.NoError(err)
+	require.Equal(nil, val)
 }
 
 func TestFloat64SQLScan(t *testing.T) {
-	var f null.NullFloat64
+	require := require.New(t)
+
+	var f null.Float64
 	err := f.Scan(1.2345)
-	fatalIf(t, err, FileLine())
-	assertFloat64(t, 1.2345, f, FileLine())
+	require.NoError(err)
+	require.True(f.Valid)
+	require.Equal(1.2345, f.Float64)
 
-	var i null.NullFloat64
+	var i null.Float64
 	err = i.Scan(12345)
-	fatalIf(t, err, FileLine())
-	assertFloat64(t, 12345, i, FileLine())
+	require.NoError(err)
+	require.True(i.Valid)
+	require.Equal(float64(12345), i.Float64)
 
-	var f64Str null.NullFloat64
+	var f64Str null.Float64
 	// NB. Scan will coerce strings, but UnmarshalJSON won't.
 	err = f64Str.Scan("1.2345")
-	fatalIf(t, err, FileLine())
-	assertFloat64(t, 1.2345, f, FileLine())
+	require.NoError(err)
+	require.True(f.Valid)
+	require.Equal(1.2345, f.Float64)
 
-	var nul null.NullFloat64
+	var nul null.Float64
 	err = nul.Scan(nil)
-	fatalIf(t, err, FileLine())
-	assertNullFloat64(t, nul, FileLine())
+	require.NoError(err)
+	require.False(nul.Valid)
 
-	var wrong null.NullFloat64
+	var wrong null.Float64
 	err = wrong.Scan("hello world")
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 }
 
 func TestFloat64MarshalJSON(t *testing.T) {
-	f := null.Float64(1.2345)
-	data, err := json.Marshal(f)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "1.2345", FileLine())
+	require := require.New(t)
+	var data []byte
+	var err error
+
+	f := null.NewFloat64(1.2345)
+	data, err = json.Marshal(f)
+	require.NoError(err)
+	require.EqualValues("1.2345", data)
 	data, err = json.Marshal(&f)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "1.2345", FileLine())
+	require.NoError(err)
+	require.EqualValues("1.2345", data)
 
-	i := null.Float64(12345)
+	i := null.NewFloat64(12345)
 	data, err = json.Marshal(i)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "12345", FileLine())
+	require.NoError(err)
+	require.EqualValues("12345", data)
 	data, err = json.Marshal(&i)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "12345", FileLine())
+	require.NoError(err)
+	require.EqualValues("12345", data)
 
-	zero := null.Float64(0)
+	zero := null.NewFloat64(0)
 	data, err = json.Marshal(zero)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "0", FileLine())
+	require.NoError(err)
+	require.EqualValues("0", data)
 	data, err = json.Marshal(&zero)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "0", FileLine())
+	require.NoError(err)
+	require.EqualValues("0", data)
 
-	nul := null.NullFloat64{}
+	nul := null.Float64{}
 	data, err = json.Marshal(nul)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "null", FileLine())
+	require.NoError(err)
+	require.EqualValues("null", data)
 	data, err = json.Marshal(&nul)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "null", FileLine())
+	require.NoError(err)
+	require.EqualValues("null", data)
 
-	nan := null.Float64(math.NaN())
+	nan := null.NewFloat64(math.NaN())
 	data, err = json.Marshal(nan)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 	data, err = json.Marshal(&nan)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 
-	inf := null.Float64(math.Inf(1))
+	inf := null.NewFloat64(math.Inf(1))
 	data, err = json.Marshal(inf)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 	data, err = json.Marshal(&inf)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 }
 
 func TestFloat64UnmarshalJSON(t *testing.T) {
+	require := require.New(t)
+	var err error
+
 	// Successful Valid Parses
 
-	var f null.NullFloat64
-	err := json.Unmarshal(floatJSON, &f)
-	fatalIf(t, err, FileLine())
-	assertFloat64(t, 1.2345, f, FileLine())
+	var f null.Float64
+	err = json.Unmarshal([]byte("1.2345"), &f)
+	require.NoError(err)
+	require.True(f.Valid)
+	require.Equal(1.2345, f.Float64)
 
-	var i null.NullFloat64
-	err = json.Unmarshal(intJSON, &i)
-	fatalIf(t, err, FileLine())
-	assertFloat64(t, 12345, i, FileLine())
+	var i null.Float64
+	err = json.Unmarshal([]byte("12345"), &i)
+	require.NoError(err)
+	require.True(i.Valid)
+	require.Equal(float64(12345), i.Float64)
 
 	// Successful Null Parses
 
-	var nul null.NullFloat64
+	var nul null.Float64
 	err = json.Unmarshal([]byte("null"), &nul)
-	fatalIf(t, err, FileLine())
-	assertNullFloat64(t, nul, FileLine())
+	require.NoError(err)
+	require.False(nul.Valid)
 
 	// Unsuccessful Parses
 	// TODO: make types for type mismatches on parsing, and check that the
 	// correct error type is being returned here.
 
-	var f64Str null.NullFloat64
+	var f64Str null.Float64
 	// Floats wrapped in quotes aren't floats.
-	err = json.Unmarshal(floatStringJSON, &f64Str)
-	fatalUnless(t, err, FileLine())
+	err = json.Unmarshal([]byte(`"1.2345"`), &f64Str)
+	require.Error(err)
 
-	var empty null.NullFloat64
+	var empty null.Float64
 	err = json.Unmarshal([]byte(""), &empty)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 
-	var quotes null.NullFloat64
+	var quotes null.Float64
 	err = json.Unmarshal([]byte(`""`), &quotes)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 
-	var badType null.NullFloat64
+	var badType null.Float64
 	// Booleans are never floats.
-	err = json.Unmarshal(boolTrueJSON, &badType)
-	fatalUnless(t, err, FileLine())
+	err = json.Unmarshal([]byte("true"), &badType)
+	require.Error(err)
 
 	// The JSON specification does not include NaN, INF, Infinity, NegInfinity
 	// or any other common literal for the IEEE 754 floating point
 	// not-really-number values. As such, un-marshaling them from JSON will
 	// result in errors.
-	var nan null.NullFloat64
+	var nan null.Float64
 	err = json.Unmarshal([]byte("NaN"), &nan)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 
-	var inf null.NullFloat64
+	var inf null.Float64
 	err = json.Unmarshal([]byte("INF"), &inf)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 
-	var invalid null.NullFloat64
-	err = invalid.UnmarshalJSON(invalidJSON)
+	var invalid null.Float64
+	err = invalid.UnmarshalJSON([]byte(":->"))
 	if _, ok := err.(*json.SyntaxError); !ok {
-		t.Fatalf("expected json.SyntaxError, not %T", err)
+		require.FailNowf(
+			"Unexpected Error Type",
+			"expected *json.SyntaxError, not %T", err)
 	}
 }
 
 func TestFloat64MarshalMapValue(t *testing.T) {
-	wrapper := struct{ Float64 null.NullFloat64 }{null.Float64(1.2345)}
-	data, err := maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Float64": 1.2345}, FileLine())
-	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Float64": 1.2345}, FileLine())
+	require := require.New(t)
+	type Wrapper struct{ Float64 null.Float64 }
+	var wrapper Wrapper
+	var data map[string]interface{}
+	var err error
 
-	wrapper = struct{ Float64 null.NullFloat64 }{null.Float64(0)}
+	wrapper = Wrapper{null.NewFloat64(1.2345)}
 	data, err = maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Float64": 0.0}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Float64": 1.2345}, data)
 	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Float64": 0.0}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Float64": 1.2345}, data)
+
+	wrapper = Wrapper{null.NewFloat64(0)}
+	data, err = maps.Marshal(wrapper)
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Float64": 0.0}, data)
+	data, err = maps.Marshal(&wrapper)
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Float64": 0.0}, data)
 
 	// Null NullFloat64s should be encoded as "nil"
-	wrapper = struct{ Float64 null.NullFloat64 }{null.NullFloat64{}}
+	wrapper = Wrapper{null.Float64{}}
 	data, err = maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Float64": nil}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Float64": nil}, data)
 	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Float64": nil}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Float64": nil}, data)
 }
