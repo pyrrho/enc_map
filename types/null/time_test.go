@@ -8,295 +8,280 @@ import (
 
 	"github.com/pyrrho/encoding/maps"
 	"github.com/pyrrho/encoding/types/null"
+	"github.com/stretchr/testify/require"
 )
 
-// Helper Functions
+var (
+	timeString = "2012-12-21T21:21:21Z"
+	timeJSON   = []byte(`"2012-12-21T21:21:21Z"`)
+	timeValue  = time.Date(
+		2012, time.December, 21,
+		21, 21, 21, 0,
+		time.UTC,
+	)
+	zeroTimeString = "0001-01-01T00:00:00Z"
+	zeroTimeJSON   = []byte(`"0001-01-01T00:00:00Z"`)
+)
 
-func assertTime(t *testing.T, expected time.Time, actual null.NullTime, fileLine string) {
-	if !actual.Valid {
-		t.Fatalf("%s: NullTime is null, but should be valid", fileLine)
-	}
-	if expected != actual.Time {
-		t.Fatalf("%s: %v ≠ %v", fileLine, expected, actual.Time)
-	}
-}
+func TestTimeCtors(t *testing.T) {
+	require := require.New(t)
 
-func assertNullTime(t *testing.T, actual null.NullTime, fileLine string) {
-	if actual.Valid {
-		t.Fatalf("%s: NullTime is valid, but should be null", fileLine)
-	}
-}
+	// null.NullTime() returns a new null null.Time.
+	// This is equivalent to null.Time{}.
+	nul := null.NullTime()
+	require.False(nul.Valid)
 
-// Tests
+	empty := null.Time{}
+	require.False(empty.Valid)
 
-func TestTimeFrom(t *testing.T) {
-	assertTime(t, timeValue, null.TimeFrom(timeValue), FileLine())
-	assertTime(t, time.Time{}, null.TimeFrom(zeroTimeValue), FileLine())
-}
+	// null.NewTime constructs a new, valid null.Time from a time.Time.
+	ti := null.NewTime(time.Date(
+		2012, time.December, 21,
+		21, 21, 21, 0,
+		time.UTC,
+	))
+	require.True(ti.Valid)
+	require.Equal(timeValue, ti.Time)
 
-func TestTimeFromPtr(t *testing.T) {
-	assertTime(t, timeValue, null.TimeFromPtr(&timeValue), FileLine())
-	assertTime(t, time.Time{}, null.TimeFromPtr(&zeroTimeValue), FileLine())
-	assertNullTime(t, null.TimeFromPtr(nil), FileLine())
-}
+	zero := null.NewTime(time.Time{})
+	require.True(zero.Valid)
+	require.Equal(time.Time{}, zero.Time)
 
-func TestTimeCtor(t *testing.T) {
-	var nilPtr *time.Time
+	// Valid RFC 3339 strings can also be used to generate new Time objects.
+	tis, err := null.NewTimeStr(timeString)
+	require.NoError(err)
+	require.True(tis.Valid)
+	require.Equal(timeValue, tis.Time)
 
-	assertTime(t, timeValue, null.Time(timeValue), FileLine())
-	assertTime(t, time.Time{}, null.Time(zeroTimeValue), FileLine())
-	assertTime(t, timeValue, null.Time(&timeValue), FileLine())
-	assertTime(t, time.Time{}, null.Time(&zeroTimeValue), FileLine())
-	assertNullTime(t, null.Time(nil), FileLine())
-	assertNullTime(t, null.Time(nilPtr), FileLine())
-}
+	zeros, err := null.NewTimeStr(zeroTimeString)
+	require.NoError(err)
+	require.True(zeros.Valid)
+	require.Equal(time.Time{}, zeros.Time)
 
-func TestFailureNewTimeFromInt(t *testing.T) {
-	defer ShouldPanic(t, FileLine())
-	_ = null.Time(2012)
-}
+	nuls, err := null.NewTimeStr("")
+	require.NoError(err)
+	require.False(nuls.Valid)
 
-func TestFailureNewTimeFromString(t *testing.T) {
-	defer ShouldPanic(t, FileLine())
-	_ = null.Time(timeString)
+	badString, err := null.NewTimeStr("December 12th, 12:02")
+	require.Error(err)
+	require.False(badString.Valid)
 }
 
 func TestTimeValueOrZero(t *testing.T) {
-	ti := null.Time(timeValue)
-	if ti.ValueOrZero().IsZero() || ti.ValueOrZero() != timeValue {
-		t.Fatalf("unexpected ValueOrZero(), %s ≠ %s ", timeValue, ti.ValueOrZero())
-	}
+	require := require.New(t)
 
-	nul := null.NullTime{}
-	if !nul.ValueOrZero().IsZero() {
-		t.Fatalf("unexpected ValueOrZero(), %s ≠ %s", zeroTimeValue, nul.ValueOrZero())
-	}
-}
+	ti := null.NewTime(timeValue)
+	require.Equal(timeValue, ti.ValueOrZero())
 
-func TestTimePtr(t *testing.T) {
-	ti := null.Time(timeValue)
-	ptr := ti.Ptr()
-	if *ptr != timeValue {
-		t.Fatalf("bad %s time: %#v ≠ %v\n", "pointer", ptr, timeValue)
-	}
-
-	nul := null.NullTime{}
-	ptr = nul.Ptr()
-	if ptr != nil {
-		t.Fatalf("bad %s time: %#v ≠ %s\n", "nil pointer", ptr, "nil")
-	}
+	nul := null.Time{}
+	require.Equal(time.Time{}, nul.ValueOrZero())
 }
 
 func TestTimeSet(t *testing.T) {
-	ti := null.NullTime{}
-	assertNullTime(t, ti, FileLine())
+	require := require.New(t)
+
+	ti := null.Time{}
+
 	ti.Set(timeValue)
-	assertTime(t, timeValue, ti, FileLine())
+	require.True(ti.Valid)
+	require.Equal(timeValue, ti.Time)
+
 	ti.Set(time.Time{})
-	assertTime(t, time.Time{}, ti, FileLine())
+	require.True(ti.Valid)
+	require.Equal(time.Time{}, ti.Time)
 }
 
 func TestTimeNull(t *testing.T) {
-	ti := null.Time(timeValue)
-	assertTime(t, timeValue, ti, FileLine())
+	require := require.New(t)
+
+	ti := null.NewTime(timeValue)
+
 	ti.Null()
-	assertNullTime(t, ti, FileLine())
+	require.False(ti.Valid)
 }
 
 func TestTimeIsNil(t *testing.T) {
-	ti := null.Time(timeValue)
-	if ti.IsNil() {
-		t.Fatalf("IsNil() should be false")
-	}
-	empty := null.Time(time.Time{})
-	if empty.IsNil() {
-		t.Fatalf("IsNil() should be false")
-	}
-	nul := null.NullTime{}
-	if !nul.IsNil() {
-		t.Fatalf("IsNil() should be true")
-	}
+	require := require.New(t)
+
+	ti := null.NewTime(timeValue)
+	require.False(ti.IsNil())
+
+	zero := null.NewTime(time.Time{})
+	require.False(zero.IsNil())
+
+	nul := null.Time{}
+	require.True(nul.IsNil())
 }
 
 func TestTimeIsZero(t *testing.T) {
-	ti := null.Time(timeValue)
-	if ti.IsZero() {
-		t.Fatalf("IsZero() should be false")
-	}
-	empty := null.Time(time.Time{})
-	if !empty.IsZero() {
-		t.Fatalf("IsZero() should be true")
-	}
-	nul := null.ByteSlice{}
-	if !nul.IsZero() {
-		t.Fatalf("IsZero() should be true")
-	}
-}
+	require := require.New(t)
 
-func TestTimeValue(t *testing.T) {
-	var val driver.Value
-	var err error
+	ti := null.NewTime(timeValue)
+	require.False(ti.IsZero())
 
-	ti := null.Time(timeValue)
-	val, err = ti.Value()
-	fatalIf(t, err, FileLine())
-	if timeValue != val.(time.Time) {
-		t.Fatalf("ti.Value() should return a valid driver.Value")
-	}
+	zero := null.NewTime(time.Time{})
+	require.True(zero.IsZero())
 
-	zero := null.Time(zeroTimeValue)
-	val, err = zero.Value()
-	fatalIf(t, err, FileLine())
-	if zeroTimeValue != val.(time.Time) {
-		t.Fatalf("zero.Value() should return a valid driver.Value")
-	}
-
-	nul := null.NullTime{}
-	val, err = nul.Value()
-	fatalIf(t, err, FileLine())
-	if val != nil {
-		t.Fatalf("nul.Value() should return a nul driver.Value")
-	}
+	nul := null.Time{}
+	require.True(nul.IsZero())
 }
 
 func TestTimeSQLValue(t *testing.T) {
-	ti := null.Time(timeValue)
-	val, err := ti.Value()
-	fatalIf(t, err, FileLine())
-	if timeValue != val.(time.Time) {
-		t.Fatalf("NullTime{..., true}.Value() should return a valid driver.Value (time.Time)")
-	}
+	require := require.New(t)
+	var val driver.Value
+	var err error
 
-	empty := null.Time(time.Time{})
-	val, err = empty.Value()
-	fatalIf(t, err, FileLine())
-	if zeroTimeValue != val.(time.Time) {
-		t.Fatalf("NullTime{..., true}.Value() should return a valid driver.Value (time.Time)")
-	}
+	ti := null.NewTime(timeValue)
+	val, err = ti.Value()
+	require.NoError(err)
+	require.Equal(timeValue, val)
 
-	nul := null.NullTime{}
+	zero := null.NewTime(time.Time{})
+	val, err = zero.Value()
+	require.NoError(err)
+	require.Equal(time.Time{}, val)
+
+	nul := null.Time{}
 	val, err = nul.Value()
-	fatalIf(t, err, FileLine())
-	if nil != val {
-		t.Fatalf("NullTime{..., false}.Value() should return a nil driver.Value")
-	}
+	require.NoError(err)
+	require.Equal(nil, val)
 }
 
 func TestTimeSQLScan(t *testing.T) {
-	var ti null.NullTime
-	err := ti.Scan(timeValue)
-	fatalIf(t, err, FileLine())
-	assertTime(t, timeValue, ti, FileLine())
+	require := require.New(t)
+	var err error
 
-	var zero null.NullTime
-	err = zero.Scan(zeroTimeValue)
-	fatalIf(t, err, FileLine())
-	assertTime(t, zeroTimeValue, zero, FileLine())
+	var ti null.Time
+	err = ti.Scan(timeValue)
+	require.NoError(err)
+	require.True(ti.Valid)
+	require.Equal(timeValue, ti.Time)
 
-	var nul null.NullTime
+	var zero null.Time
+	err = zero.Scan(time.Time{})
+	require.NoError(err)
+	require.True(zero.Valid)
+	require.Equal(time.Time{}, zero.Time)
+
+	var nul null.Time
 	err = nul.Scan(nil)
-	fatalIf(t, err, FileLine())
-	assertNullTime(t, nul, FileLine())
+	require.NoError(err)
+	require.False(nul.Valid)
 
-	var wrong null.NullTime
+	var wrong null.Time
 	err = wrong.Scan("null")
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 }
 
 func TestTimeMarshalJSON(t *testing.T) {
-	ti := null.Time(timeValue)
-	data, err := json.Marshal(ti)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, string(timeJSON), FileLine())
+	require := require.New(t)
+	var data []byte
+	var err error
+
+	ti := null.NewTime(timeValue)
+	data, err = json.Marshal(ti)
+	require.NoError(err)
+	require.Equal(timeJSON, data)
 	data, err = json.Marshal(&ti)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, string(timeJSON), FileLine())
+	require.NoError(err)
+	require.Equal(timeJSON, data)
 
-	zero := null.Time(zeroTimeValue)
+	zero := null.NewTime(time.Time{})
 	data, err = json.Marshal(zero)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, string(zeroTimeJSON), FileLine())
+	require.NoError(err)
+	require.Equal(zeroTimeJSON, data)
 	data, err = json.Marshal(&zero)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, string(zeroTimeJSON), FileLine())
+	require.NoError(err)
+	require.Equal(zeroTimeJSON, data)
 
-	nul := null.NullTime{}
+	nul := null.Time{}
 	data, err = json.Marshal(nul)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "null", FileLine())
+	require.NoError(err)
+	require.EqualValues("null", data)
 	data, err = json.Marshal(&nul)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "null", FileLine())
+	require.NoError(err)
+	require.EqualValues("null", data)
 }
 
 func TestTimeUnmarshalJSON(t *testing.T) {
+	require := require.New(t)
+
 	// Successful Valid Parses
 
-	var ti null.NullTime
+	var ti null.Time
 	err := json.Unmarshal(timeJSON, &ti)
-	fatalIf(t, err, FileLine())
-	assertTime(t, timeValue, ti, FileLine())
+	require.NoError(err)
+	require.True(ti.Valid)
+	require.Equal(timeValue, ti.Time)
 
-	var zero null.NullTime
+	var zero null.Time
 	err = json.Unmarshal(zeroTimeJSON, &zero)
-	fatalIf(t, err, FileLine())
-	assertTime(t, zeroTimeValue, zero, FileLine())
+	require.NoError(err)
+	require.True(zero.Valid)
+	require.Equal(time.Time{}, zero.Time)
 
 	// Successful Null Parses
 
-	var nul null.NullTime
+	var nul null.Time
 	err = json.Unmarshal([]byte("null"), &nul)
-	fatalIf(t, err, FileLine())
-	assertNullTime(t, nul, FileLine())
+	require.NoError(err)
+	require.False(nul.Valid)
 
-	var quotes null.NullTime
+	var quotes null.Time
 	err = json.Unmarshal([]byte(`""`), &quotes)
-	fatalIf(t, err, FileLine())
-	assertNullTime(t, nul, FileLine())
+	require.NoError(err)
+	require.False(nul.Valid)
 
 	// Unsuccessful Parses
 	// TODO: make types for type mismatches on parsing, and check that the
 	// correct error type is being returned here.
 
-	var badType null.NullTime
-	err = json.Unmarshal(intJSON, &badType)
-	fatalUnless(t, err, FileLine())
+	var badType null.Time
+	err = json.Unmarshal([]byte("12345"), &badType)
+	require.Error(err)
 
-	var empty null.NullTime
+	var empty null.Time
 	err = json.Unmarshal([]byte(""), &empty)
-	fatalUnless(t, err, FileLine())
+	require.Error(err)
 
-	var invalid null.NullTime
-	err = invalid.UnmarshalJSON(invalidJSON)
+	var invalid null.Time
+	err = invalid.UnmarshalJSON([]byte(":->"))
 	if _, ok := err.(*json.SyntaxError); !ok {
-		t.Fatalf("expected json.SyntaxError, not %T", err)
+		require.FailNowf(
+			"Unexpected Error Type",
+			"expected *json.SyntaxError, not %T", err)
 	}
-	assertNullTime(t, invalid, FileLine())
 }
 
 func TestTimeMarshalMapValue(t *testing.T) {
-	wrapper := struct{ Time null.NullTime }{null.Time(timeValue)}
-	data, err := maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Time": timeValue}, FileLine())
-	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Time": timeValue}, FileLine())
+	require := require.New(t)
+	type Wrapper struct{ Time null.Time }
+	var wrapper Wrapper
+	var data map[string]interface{}
+	var err error
 
-	wrapper = struct{ Time null.NullTime }{null.Time(zeroTimeValue)}
+	wrapper = Wrapper{null.NewTime(timeValue)}
 	data, err = maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Time": zeroTimeValue}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Time": timeValue}, data)
 	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Time": zeroTimeValue}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Time": timeValue}, data)
+
+	wrapper = Wrapper{null.NewTime(time.Time{})}
+	data, err = maps.Marshal(wrapper)
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Time": time.Time{}}, data)
+	data, err = maps.Marshal(&wrapper)
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Time": time.Time{}}, data)
 
 	// Null NullTimes should be encoded as "nil"
-	wrapper = struct{ Time null.NullTime }{null.NullTime{}}
+	wrapper = struct{ Time null.Time }{null.Time{}}
 	data, err = maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Time": nil}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Time": nil}, data)
 	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Time": nil}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Time": nil}, data)
 }

@@ -7,108 +7,93 @@ import (
 	"time"
 )
 
-// NullTime is a nullable wrapper around the time.Time type implementing all of
-// the encoding/type interfaces. The zero time instant is considered non-null.
-// if null.
-type NullTime struct {
+// Time is a nullable wrapper around the time.Time type implementing all of the
+// the pyrrho/encoding/types interfaces detailed in the package comments.
+//
+// If the Time is valid and contains the zero time instant, it will be
+// considered non-null, and of zero value.
+type Time struct {
 	Time  time.Time
 	Valid bool
 }
 
 // Constructors
 
-// Time creates a new NullTime based on the type and value of the given
-// interface. This function intentionally sacrafices compile-time safety for
-// developer convenience.
-//
-// If the interface is nil or a nil *time.Time, the new NullTime will be null.
-//
-// If the interface is a time.Time or a non-nil *time.Time, the new NullTime
-// will be valid and will be initialized with the (possibly dereferenced) value
-// of the interface.
-//
-// If the interface is any other type, this function will panic.
-func Time(i interface{}) NullTime {
-	switch v := i.(type) {
-	case time.Time:
-		return TimeFrom(v)
-	case *time.Time:
-		return TimeFromPtr(v)
-	case nil:
-		return NullTime{}
+// NullTime constructs and returns a new null Time.
+func NullTime() Time {
+	return Time{
+		Time:  time.Time{},
+		Valid: false,
 	}
-	panic(fmt.Errorf(
-		"null.NullTime: invalid constructor argument; %#v of type %T "+
-			"is not of type time.Time, *time.Time, or nil", i, i))
 }
 
-// TimeFrom creates a valid Time from t.
-func TimeFrom(t time.Time) NullTime {
-	return NullTime{
+// NewTime constructs and returns a new, valid Time initialized with the value
+// of the given t.
+func NewTime(t time.Time) Time {
+	return Time{
 		Time:  t,
 		Valid: true,
 	}
 }
 
-// TimeFromPtr creates a valid Time from *t.
-func TimeFromPtr(t *time.Time) NullTime {
-	if t == nil {
-		return NullTime{}
+// NewTimeStr parses a given string, s, as an RFC 3339 and returns
+func NewTimeStr(s string) (Time, error) {
+	if len(s) == 0 {
+		return Time{}, nil
 	}
-	return TimeFrom(*t)
+
+	var tmp time.Time
+	tmp, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return Time{}, err
+	}
+	return Time{
+		Time:  tmp,
+		Valid: true,
+	}, nil
 }
 
 // Getters and Setters
 
-// ValueOrZero returns the value of this NullTime if it is valid; otherwise
-// it returns the zero value for a time.Time.
-func (t NullTime) ValueOrZero() time.Time {
+// ValueOrZero returns the value of t if it is valid; otherwise it returns the
+// zero value for a time.Time.
+func (t Time) ValueOrZero() time.Time {
 	if !t.Valid {
 		return time.Time{}
 	}
 	return t.Time
 }
 
-// Ptr returns a pointer to this NullTime's value if it is valid; otherwise
-// returns a nil pointer. The captured pointer will be able to modify the value
-// of this NullTime.
-func (t *NullTime) Ptr() *time.Time {
-	if !t.Valid {
-		return nil
-	}
-	return &t.Time
-}
-
-// Set modifies the value stored in this NullTime, and guarantees it is
-// valid.
-func (t *NullTime) Set(v time.Time) {
+// Set modifies the value stored in t, and guarantees it is valid.
+func (t *Time) Set(v time.Time) {
 	t.Time = v
 	t.Valid = true
 }
 
-// Null marks this NullTime as null with no meaningful value.
-func (t *NullTime) Null() {
+// Null marks t as null with no meaningful value.
+func (t *Time) Null() {
+	t.Time = time.Time{}
 	t.Valid = false
 }
 
 // Interfaces
 
 // IsNil implements the pyrrho/encoding IsNiler interface. It will return true
-// if this NullTime is null.
-func (t NullTime) IsNil() bool {
+// if t is null.
+func (t Time) IsNil() bool {
 	return !t.Valid
 }
 
 // IsZero implements the pyrrho/encoding IsZeroer interface. It will return true
-// if this NullTime is null or if its value is the zero time instant.
-func (t NullTime) IsZero() bool {
+// if t is null or if its value is the zero time instant.
+func (t Time) IsZero() bool {
 	return !t.Valid || t.Time == time.Time{}
 }
 
 // Value implements the database/sql/driver Valuer interface. As time.Time and
 // nil are both valid types to be stored in a driver.Value, it will return this
 // NullTime's value if valid, or nil otherwise.
-func (t NullTime) Value() (driver.Value, error) {
+func (t Time) Value() (driver.Value, error) {
 	if !t.Valid {
 		return nil, nil
 	}
@@ -116,11 +101,11 @@ func (t NullTime) Value() (driver.Value, error) {
 }
 
 // Scan implements the database/sql Scanner interface. It will receive a value
-// from an SQL database and assign it to this NullTime, so long as the provided
-// data is of type nil or time.Time. All other types will result in an error.
-func (t *NullTime) Scan(src interface{}) error {
+// from an SQL database and assign it to t, so long as the provided data is of
+// type nil or time.Time. All other types will result in an error.
+func (t *Time) Scan(src interface{}) error {
 	if t == nil {
-		return fmt.Errorf("null.NullTime: Scan called on nil pointer")
+		return fmt.Errorf("null.Time: Scan called on nil pointer")
 	}
 	switch val := src.(type) {
 	case time.Time:
@@ -132,14 +117,14 @@ func (t *NullTime) Scan(src interface{}) error {
 		t.Valid = false
 		return nil
 	default:
-		return fmt.Errorf("null.NullTime: cannot scan type %T (%v)", val, src)
+		return fmt.Errorf("null.Time: cannot scan type %T (%v)", val, src)
 	}
 }
 
 // MarshalJSON implements the encoding/json Marshaler interface. It will encode
-// this NullTime into its JSON RFC 3339 string representation if valid, or
+// t into its JSON RFC 3339 string representation if valid, or
 // 'null' otherwise.
-func (t NullTime) MarshalJSON() ([]byte, error) {
+func (t Time) MarshalJSON() ([]byte, error) {
 	if !t.Valid {
 		return []byte("null"), nil
 	}
@@ -147,14 +132,14 @@ func (t NullTime) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the encoding/json Unmarshaler interface. It will
-// decode a given []byte into this NullTime so long as the provided []byte
+// decode a given []byte into t so long as the provided []byte
 // is a valid JSON representation of an RFC 3339 string. Empty strings and
 // the 'null' keyword will both decode into a null NullTime.
 //
-// If the decode fails, the value of this NullTime will be unchanged.
-func (t *NullTime) UnmarshalJSON(data []byte) error {
+// If the decode fails, the value of t will be unchanged.
+func (t *Time) UnmarshalJSON(data []byte) error {
 	if t == nil {
-		return fmt.Errorf("null.NullTime: UnmarshalJSON called on nil pointer")
+		return fmt.Errorf("null.Time: UnmarshalJSON called on nil pointer")
 	}
 	var j interface{}
 	if err := json.Unmarshal(data, &j); err != nil {
@@ -182,15 +167,15 @@ func (t *NullTime) UnmarshalJSON(data []byte) error {
 		t.Valid = false
 		return nil
 	default:
-		return fmt.Errorf("null.NullTime: cannot unmarshal JSON of type %T (%v)",
+		return fmt.Errorf("null.Time: cannot unmarshal JSON of type %T (%v)",
 			val, data)
 	}
 }
 
 // MarshalMapValue implements the pyrrho/encoding/maps Marshaler interface. It
-// will encode this NullTime into an interface{} representation for use in a
+// will encode t into an interface{} representation for use in a
 // map[Time]interface{} if valid, or return nil otherwise.
-func (t NullTime) MarshalMapValue() (interface{}, error) {
+func (t Time) MarshalMapValue() (interface{}, error) {
 	if t.Valid {
 		return t.Time, nil
 	}
