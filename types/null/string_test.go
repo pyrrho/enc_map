@@ -1,298 +1,289 @@
 package null_test
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"testing"
 
 	"github.com/pyrrho/encoding/maps"
 	"github.com/pyrrho/encoding/types/null"
+	"github.com/stretchr/testify/require"
 )
 
-// Helper Functions
+func TestStringCtors(t *testing.T) {
+	require := require.New(t)
 
-func assertString(t *testing.T, expected string, b null.NullString, fileLine string) {
-	if !b.Valid {
-		t.Fatalf("%s: NullString is null, but should be valid", fileLine)
-	}
-	if expected != b.String {
-		t.Fatalf("%s: %v ≠ %v", fileLine, expected, b.String)
-	}
-}
+	// null.NullString() returns a new null null.String.
+	// This is equivalent to null.String{}.
+	nul := null.NullString()
+	require.False(nul.Valid)
 
-func assertNullString(t *testing.T, b null.NullString, fileLine string) {
-	if b.Valid {
-		t.Fatalf("%s: NullString is valid, but should be null", fileLine)
-	}
-}
+	empty := null.String{}
+	require.False(empty.Valid)
 
-func TestStringFrom(t *testing.T) {
-	assertString(t, "test", null.StringFrom("test"), FileLine())
-	assertString(t, "", null.StringFrom(""), FileLine())
-}
+	// null.NewString constructs a new, valid null.String.
+	s := null.NewString("Hello World")
+	require.True(s.Valid)
+	require.Equal("Hello World", s.String)
 
-func TestStringFromPtr(t *testing.T) {
-	s := "test"
-	assertString(t, "test", null.StringFromPtr(&s), FileLine())
-	assertNullString(t, null.StringFromPtr(nil), FileLine())
-}
-
-func TestStringCtor(t *testing.T) {
-	v := "test"
-	var nilPtr *string
-
-	assertString(t, "true", null.String("true"), FileLine())
-	assertString(t, "", null.String(""), FileLine())
-	assertString(t, v, null.String(v), FileLine())
-	assertString(t, v, null.String(&v), FileLine())
-	assertNullString(t, null.String(nil), FileLine())
-	assertNullString(t, null.String(nilPtr), FileLine())
-}
-
-func TestFailureNewStringFromInt(t *testing.T) {
-	defer ShouldPanic(t, FileLine())
-	_ = null.String(0)
-}
-
-func TestFailureNewStringFromBool(t *testing.T) {
-	defer ShouldPanic(t, FileLine())
-	_ = null.String(true)
+	qs := null.NewString("")
+	require.True(qs.Valid)
+	require.Equal("", qs.String)
 }
 
 func TestStringValueOrZero(t *testing.T) {
-	valid := null.String("test")
-	if valid.ValueOrZero() != "test" {
-		t.Fatalf("unexpected ValueOrZero, %v ≠ %v", "test", valid.ValueOrZero())
-	}
+	require := require.New(t)
 
-	nul := null.NullString{}
-	if nul.ValueOrZero() != "" {
-		t.Fatalf("unexpected ValueOrZero, %v ≠ %v", "", nul.ValueOrZero())
-	}
-}
+	valid := null.NewString("test")
+	require.Equal("test", valid.String)
 
-func TestStringPtr(t *testing.T) {
-	str := null.String("test")
-	ptr := str.Ptr()
-	if *ptr != "test" {
-		t.Fatalf("bad %s string: %#v ≠ %v\n", "pointer", ptr, "test")
-	}
-
-	null := null.NullString{}
-	ptr = null.Ptr()
-	if ptr != nil {
-		t.Fatalf("bad %s string: %#v ≠ %v\n", "nil pointer", ptr, "nil")
-	}
+	nul := null.String{}
+	require.Equal("", nul.String)
 }
 
 func TestStringSet(t *testing.T) {
-	s := null.NullString{}
-	assertNullString(t, s, FileLine())
+	require := require.New(t)
+
+	s := null.String{}
+	require.False(s.Valid)
+
 	s.Set("test")
-	assertString(t, "test", s, FileLine())
+	require.True(s.Valid)
+	require.Equal("test", s.String)
+
 	s.Set("")
-	assertString(t, "", s, FileLine())
+	require.True(s.Valid)
+	require.Equal("", s.String)
 }
 
 func TestStringNull(t *testing.T) {
-	s := null.String("test")
-	assertString(t, "test", s, FileLine())
+	require := require.New(t)
+
+	s := null.NewString("test")
+
 	s.Null()
-	assertNullString(t, s, FileLine())
+	require.False(s.Valid)
 }
 
 func TestStringIsNil(t *testing.T) {
-	a := null.String("test")
-	if a.IsNil() {
-		t.Fatal(`NullString{"test", true}.IsNil() should be false`)
-	}
-	b := null.String("")
-	if b.IsNil() {
-		t.Fatal(`NullString{"", true}.IsNil() should be false`)
-	}
-	nul := null.NullString{}
-	if !nul.IsNil() {
-		t.Fatal("NullString{..., false}.IsNil() should be true")
-	}
+	require := require.New(t)
+
+	s := null.NewString("test")
+	require.False(s.IsNil())
+
+	qs := null.NewString("")
+	require.False(qs.IsNil())
+
+	nul := null.String{}
+	require.True(nul.IsNil())
 }
 
 func TestStringIsZero(t *testing.T) {
-	a := null.String("test")
-	if a.IsZero() {
-		t.Fatal(`NullString{"test", true}.IsZero() should be false`)
-	}
-	b := null.String("")
-	if !b.IsZero() {
-		t.Fatal(`NullString{"", true}.IsZero() should be true`)
-	}
-	nul := null.NullString{}
-	if !nul.IsZero() {
-		t.Fatal("NullString{..., false}.IsZero() should be true")
-	}
+	require := require.New(t)
+
+	s := null.NewString("test")
+	require.False(s.IsZero())
+
+	qs := null.NewString("")
+	require.True(qs.IsZero())
+
+	nul := null.String{}
+	require.True(nul.IsZero())
 }
 
 func TestStringSQLValue(t *testing.T) {
-	s := null.String("test")
-	val, err := s.Value()
-	fatalIf(t, err, FileLine())
-	if "test" != val.(string) {
-		t.Fatalf(`NullString{"test", true}.Value() should return a valid driver.Value (string)`)
-	}
+	require := require.New(t)
+	var val driver.Value
+	var err error
 
-	nul := null.NullString{}
+	s := null.NewString("test")
+	val, err = s.Value()
+	require.NoError(err)
+	require.Equal("test", val)
+
+	nul := null.String{}
 	val, err = nul.Value()
-	fatalIf(t, err, FileLine())
-	if nil != val {
-		t.Fatalf("NullString{..., false}.Value() should return a nil driver.Value")
-	}
+	require.NoError(err)
+	require.Equal(nil, val)
 }
 
 func TestStringSQLScan(t *testing.T) {
-	var str null.NullString
-	err := str.Scan("test")
-	fatalIf(t, err, FileLine())
-	assertString(t, "test", str, FileLine())
+	require := require.New(t)
+	var err error
 
-	var empty null.NullString
+	var str null.String
+	err = str.Scan("test")
+	require.NoError(err)
+	require.True(str.Valid)
+	require.Equal("test", str.String)
+
+	var empty null.String
 	err = empty.Scan("")
-	fatalIf(t, err, FileLine())
-	assertString(t, "", empty, FileLine())
+	require.NoError(err)
+	require.True(empty.Valid)
+	require.Equal("", empty.String)
 
-	var nul null.NullString
+	var nul null.String
 	err = nul.Scan(nil)
-	fatalIf(t, err, FileLine())
-	assertNullString(t, nul, FileLine())
+	require.NoError(err)
+	require.False(nul.Valid)
 
 	// NB. Scan is aggressive about converting values to strings. UnmarshalJSON
 	// are less so.
-	var i null.NullString
+	var i null.String
 	err = i.Scan(12345)
-	fatalIf(t, err, FileLine())
-	assertString(t, "12345", i, FileLine())
+	require.NoError(err)
+	require.True(i.Valid)
+	require.Equal("12345", i.String)
 
-	var f null.NullString
+	var f null.String
 	err = f.Scan(1.2345)
-	fatalIf(t, err, FileLine())
-	assertString(t, "1.2345", f, FileLine())
+	require.NoError(err)
+	require.True(f.Valid)
+	require.Equal("1.2345", f.String)
 
-	var b null.NullString
+	var b null.String
 	err = b.Scan(true)
-	fatalIf(t, err, FileLine())
-	assertString(t, "true", b, FileLine())
+	require.NoError(err)
+	require.True(b.Valid)
+	require.Equal("true", b.String)
 }
 
 func TestStringMarshalJSON(t *testing.T) {
-	str := null.String("test")
-	data, err := json.Marshal(str)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, `"test"`, FileLine())
+	require := require.New(t)
+	var data []byte
+	var err error
+
+	str := null.NewString("test")
+	data, err = json.Marshal(str)
+	require.NoError(err)
+	require.EqualValues(`"test"`, data)
 	data, err = json.Marshal(&str)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, `"test"`, FileLine())
+	require.NoError(err)
+	require.EqualValues(`"test"`, data)
 
-	zero := null.String("")
+	zero := null.NewString("")
 	data, err = json.Marshal(zero)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, `""`, FileLine())
+	require.NoError(err)
+	require.EqualValues(`""`, data)
 	data, err = json.Marshal(&zero)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, `""`, FileLine())
+	require.NoError(err)
+	require.EqualValues(`""`, data)
 
-	null := null.NullString{}
+	null := null.String{}
 	data, err = json.Marshal(null)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "null", FileLine())
+	require.NoError(err)
+	require.EqualValues("null", data)
 	data, err = json.Marshal(&null)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, data, "null", FileLine())
+	require.NoError(err)
+	require.EqualValues("null", data)
+}
+
+func TestStringMarshalJSONInStruct(t *testing.T) {
+	require := require.New(t)
+	var sj []byte
+	var err error
+
+	type stringTestStruct struct {
+		NullString null.String `json:"null_string"`
+		String     string      `json:"string"`
+	}
+
+	s := stringTestStruct{
+		NullString: null.NewString("valid"),
+		String:     "test",
+	}
+	sj, err = json.Marshal(s)
+	require.NoError(err)
+	require.EqualValues(`{"null_string":"valid","string":"test"}`, sj)
+
+	s = stringTestStruct{
+		NullString: null.String{},
+		String:     "test",
+	}
+	sj, err = json.Marshal(s)
+	require.NoError(err)
+	require.EqualValues(`{"null_string":null,"string":"test"}`, sj)
 }
 
 func TestStringUnmarshalJSON(t *testing.T) {
+	require := require.New(t)
+	var err error
+
 	// Successful Valid Parses
 
-	var str null.NullString
-	err := json.Unmarshal(stringJSON, &str)
-	fatalIf(t, err, FileLine())
-	assertString(t, "test", str, FileLine())
+	var str null.String
+	err = json.Unmarshal([]byte(`"test"`), &str)
+	require.NoError(err)
+	require.True(str.Valid)
+	require.Equal("test", str.String)
 
-	var quotes null.NullString
+	var quotes null.String
 	err = json.Unmarshal([]byte(`""`), &quotes)
-	fatalIf(t, err, FileLine())
-	assertString(t, "", quotes, FileLine())
+	require.NoError(err)
+	require.True(quotes.Valid)
+	require.Equal("", quotes.String)
 
-	var nullStr null.NullString
+	var nullStr null.String
 	err = json.Unmarshal([]byte(`"null"`), &nullStr)
-	fatalIf(t, err, FileLine())
-	assertString(t, "null", nullStr, FileLine())
+	require.NoError(err)
+	require.True(nullStr.Valid)
+	require.Equal("null", nullStr.String)
 
 	// Successful Null Parses
 
-	var nul null.NullString
+	var nul null.String
 	err = json.Unmarshal([]byte("null"), &nul)
-	fatalIf(t, err, FileLine())
-	assertNullString(t, nul, FileLine())
+	require.NoError(err)
+	require.False(nul.Valid)
 
 	// Unsuccessful Parses
 	// TODO: make types for type mismatches on parsing, and check that the
 	// correct error type is being returned here.
 
-	var badType null.NullString
+	var badType null.String
 	// Ints are never string.
-	err = json.Unmarshal(intJSON, &badType)
-	fatalUnless(t, err, FileLine())
+	err = json.Unmarshal([]byte("12345"), &badType)
+	require.Error(err)
 
-	var invalid null.NullString
-	err = invalid.UnmarshalJSON(invalidJSON)
+	var invalid null.String
+	err = invalid.UnmarshalJSON([]byte(":->"))
 	if _, ok := err.(*json.SyntaxError); !ok {
-		t.Fatalf("expected json.SyntaxError, not %T", err)
+		require.FailNowf(
+			"Unexpected Error Type",
+			"expected *json.SyntaxError, not %T", err)
 	}
-}
-
-func TestStringInStructMarshalJSON(t *testing.T) {
-	type stringTestStruct struct {
-		NullString null.NullString `json:"null_string"`
-		String     string          `json:"string"`
-	}
-
-	s := stringTestStruct{
-		NullString: null.String("valid"),
-		String:     "test",
-	}
-	sj, err := json.Marshal(s)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, sj, `{"null_string":"valid","string":"test"}`, FileLine())
-
-	s = stringTestStruct{
-		NullString: null.NullString{},
-		String:     "test",
-	}
-	sj, err = json.Marshal(s)
-	fatalIf(t, err, FileLine())
-	assertJSONEquals(t, sj, `{"null_string":null,"string":"test"}`, FileLine())
 }
 
 func TestStringMarshalMapValue(t *testing.T) {
-	wrapper := struct{ Slice null.NullString }{null.String("test")}
-	data, err := maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Slice": "test"}, FileLine())
-	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Slice": "test"}, FileLine())
+	require := require.New(t)
+	type Wrapper struct{ Slice null.String }
+	var wrapper Wrapper
+	var data map[string]interface{}
+	var err error
 
-	wrapper = struct{ Slice null.NullString }{null.String("")}
+	wrapper = Wrapper{null.NewString("test")}
 	data, err = maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Slice": ""}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Slice": "test"}, data)
 	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Slice": ""}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Slice": "test"}, data)
+
+	wrapper = Wrapper{null.NewString("")}
+	data, err = maps.Marshal(wrapper)
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Slice": ""}, data)
+	data, err = maps.Marshal(&wrapper)
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Slice": ""}, data)
 
 	// Null NullStrings should be encoded as "nil"
-	wrapper = struct{ Slice null.NullString }{null.NullString{}}
+	wrapper = Wrapper{null.String{}}
 	data, err = maps.Marshal(wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Slice": nil}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Slice": nil}, data)
 	data, err = maps.Marshal(&wrapper)
-	fatalIf(t, err, FileLine())
-	assertMapEquals(t, data, map[string]interface{}{"Slice": nil}, FileLine())
+	require.NoError(err)
+	require.Equal(map[string]interface{}{"Slice": nil}, data)
 }

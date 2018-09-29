@@ -6,104 +6,76 @@ import (
 	"fmt"
 )
 
-// NullString is a wrapper around the database/sql NullString type that
-// implements all of the encoding/type interfaces that sql.NullString doesn't
-// implement out of the box.
+// String is a wrapper around the database/sql NullString type that implements
+// all of the pyrrho/encoding/types interfaces detailed in the package comments
+// that sql.NullString doesn't implement out of the box.
 //
-// If the NullString is valid and contains the empty string, it will be
-// considered non-nil, and zero.
-type NullString struct {
+// If the String is valid and contains the empty string, it will be considered
+// non-nil, and of zero value.
+type String struct {
 	sql.NullString
 }
 
-// String creates a new NullString based on the type and value of the given
-// interface. This function intentionally sacrafices compile-time safety for
-// developer convenience.
-//
-// If the interface is nil or a nil *string, the new NullString will be null.
-//
-// If the interface is a string or a non-nil *string, the new NullString will be
-// valid, and will be initialized with the (possibly dereferenced) value of the
-// interface.
-//
-// If the interface is any other type this function will panic.
-func String(i interface{}) NullString {
-	switch v := i.(type) {
-	case string:
-		return StringFrom(v)
-	case *string:
-		return StringFromPtr(v)
-	case nil:
-		return NullString{}
-	}
-	panic(fmt.Errorf(
-		"null.NullString: invalid constructor argument; %#v of type %T "+
-			"is not of type string, *string, or nil", i, i))
+// Constructors
+
+// NullString constructs and returns a new null String.
+func NullString() String {
+	return String{
+		sql.NullString{
+			String: "",
+			Valid:  false,
+		}}
 }
 
-// StringFrom creates a valid String from s.
-func StringFrom(s string) NullString {
-	return NullString{sql.NullString{
-		String: s,
-		Valid:  true,
-	}}
+// NewString constructs and returns a new, valid String initialized with the
+// value of the given s.
+func NewString(s string) String {
+	return String{
+		sql.NullString{
+			String: s,
+			Valid:  true,
+		}}
 }
 
-// StringFromPtr creates a valid String from *s.
-func StringFromPtr(s *string) NullString {
-	if s == nil {
-		return NullString{}
-	}
-	return StringFrom(*s)
-}
+// Getters and Setters
 
-// ValueOrZero returns the value of this NullString if it is valid; otherwise it
-// returns the zero value for a string.
-func (s NullString) ValueOrZero() string {
+// ValueOrZero returns the value of s if it is valid; otherwise it returns the
+// zero value for a string ("").
+func (s String) ValueOrZero() string {
 	if !s.Valid {
 		return ""
 	}
 	return s.String
 }
 
-// Ptr returns a pointer to this NullString's value if it is valid; otherwise
-// returns a nil pointer. The captured pointer will be able to modify the value
-// of this NullString.
-func (s *NullString) Ptr() *string {
-	if !s.Valid {
-		return nil
-	}
-	return &s.String
-}
-
-// Set modifies the value stored in this NullString, and guarantees it is valid.
-func (s *NullString) Set(v string) {
+// Set modifies the value stored in s, and guarantees it is valid.
+func (s *String) Set(v string) {
 	s.String = v
 	s.Valid = true
 }
 
-// Null marks this NullString as null with no meaningful value.
-func (s *NullString) Null() {
+// Null marks s as null with no meaningful value.
+func (s *String) Null() {
 	s.Valid = false
 }
 
 // Interface
 
 // IsNil implements the pyrrho/encoding IsNiler interface. It will return true
-// if this NullString is null.
-func (s NullString) IsNil() bool {
+// if s is null.
+func (s String) IsNil() bool {
 	return !s.Valid
 }
 
 // IsZero implements the pyrrho/encoding IsZeroer interface. It will return true
-// if this NullString is null or if its value is 0.
-func (s NullString) IsZero() bool {
+// if s is null or if its value is the empty string.
+func (s String) IsZero() bool {
 	return !s.Valid || s.String == ""
 }
 
 // MarshalJSON implements the encoding/json Marshaler interface. It will return
-// the value of this NullString if valid, otherwise 'null'.
-func (s NullString) MarshalJSON() ([]byte, error) {
+// the value of s if valid, otherwise 'null'.
+func (s String) MarshalJSON() ([]byte, error) {
 	if !s.Valid {
 		return []byte("null"), nil
 	}
@@ -111,17 +83,17 @@ func (s NullString) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the encoding/json Unmarshaler interface. It will
-// decode a given []byte into this NullString, so long as the provided []byte
-// is a valid JSON string or a null.
+// decode a given []byte into s, so long as the provided []byte is a valid JSON
+//string or a null.
 //
-// An empty string will result in a valid-but-empty NullString. The keyword
-// 'null' will result in a null NullString. The string '"null"' is considered
-// to be a string -- not a keyword -- and will result in a valid NullString.
+// An empty string will result in a valid-but-empty String. The keyword 'null'
+// will result in a null String. The string '"null"' is considered to be a
+// string -- not a keyword -- and will result in a valid String.
 //
-// If the decode fails, the value of this NullString will be unchanged.
-func (s *NullString) UnmarshalJSON(data []byte) error {
+// If the decode fails, the value of s will be unchanged.
+func (s *String) UnmarshalJSON(data []byte) error {
 	if s == nil {
-		return fmt.Errorf("null.NullString: UnmarshalJSON called on nil pointer")
+		return fmt.Errorf("null.String: UnmarshalJSON called on nil pointer")
 	}
 	var j interface{}
 	if err := json.Unmarshal(data, &j); err != nil {
@@ -137,15 +109,15 @@ func (s *NullString) UnmarshalJSON(data []byte) error {
 		s.Valid = false
 		return nil
 	default:
-		return fmt.Errorf("null.NullString: cannot unmarshal JSON of type %T (%v)",
+		return fmt.Errorf("null.String: cannot unmarshal JSON of type %T (%v)",
 			val, data)
 	}
 }
 
 // MarshalMapValue implements the pyrrho/encoding/maps Marshaler interface. It
-// will encode this NullString into an interface{} representation for use in a
+// will encode s into an interface{} representation for use in a
 // map[string]interface{} if valid, or return nil otherwise.
-func (s NullString) MarshalMapValue() (interface{}, error) {
+func (s String) MarshalMapValue() (interface{}, error) {
 	if s.Valid {
 		return s.String, nil
 	}
