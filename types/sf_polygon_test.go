@@ -15,10 +15,10 @@ var (
 	// These are all OpenGIS Simple Feature representations of an XY Polygon with
 	// X == 1.2 and Y == 2.3, converted between representations with
 	// https://rodic.fr/blog/online-conversion-between-geometric-formats/
-	testPolygonWKT     = []byte("POLYGON((30 10,40 40,20 40,10 20,30 10))")
-	testPolygonGeoJSON = []byte(`{"type":"Polygon","coordinates":[[[30,10],[40,40],[20,40],[10,20],[30,10]]]}`)
+	testPolygonWKT     = []byte("POLYGON((30 10,40 40,20 40,10 20,30 10),(28 15,15 21,22 35,35 35,28 15))")
+	testPolygonGeoJSON = []byte(`{"type":"Polygon","coordinates":[[[30,10],[40,40],[20,40],[10,20],[30,10]],[[28,15],[15,21],[22,35],[35,35],[28,15]]]}`)
 	testPolygonWKB     = []byte{
-		0x01, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+		0x01, 0x03, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00,
 		0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x3e, 0x40, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x24, 0x40, 0x00, 0x00, 0x00,
@@ -29,15 +29,49 @@ var (
 		0x00, 0x00, 0x00, 0x24, 0x40, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x34, 0x40, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x3e, 0x40, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x24, 0x40,
+		0x00, 0x00, 0x00, 0x24, 0x40, 0x05, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3c,
+		0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2e,
+		0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2e,
+		0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x35,
+		0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36,
+		0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x41,
+		0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x41,
+		0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x41,
+		0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3c,
+		0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2e,
+		0x40,
 	}
-	testPolygonCoords = [][]geom.Coord{{
+	testPolygonExternal = [][2]float64{
 		{30, 10},
 		{40, 40},
 		{20, 40},
 		{10, 20},
 		{30, 10},
-	}}
+	}
+	testPolygonInternal = [][2]float64{
+		{28, 15},
+		{15, 21},
+		{22, 35},
+		{35, 35},
+		{28, 15},
+	}
+	testPolygonCoords = [][]geom.Coord{
+		{
+			{30, 10},
+			{40, 40},
+			{20, 40},
+			{10, 20},
+			{30, 10},
+		},
+		{
+			{28, 15},
+			{15, 21},
+			{22, 35},
+			{35, 35},
+			{28, 15},
+		},
+	}
 	testPolygonGoGeom = *geom.NewPolygon(geom.XY).MustSetCoords(testPolygonCoords)
 )
 
@@ -47,52 +81,66 @@ func TestSFPolygonCtors(t *testing.T) {
 	// types.SFPolygon is a wrapper around go-geom's Polygon class. As such,
 	// construction typically uses their conventions.
 	pa := types.NewSFPolygon(*geom.NewPolygon(geom.XY).MustSetCoords(
-		[][]geom.Coord{{
+		[][]geom.Coord{
+			{
+				{30, 10},
+				{40, 40},
+				{20, 40},
+				{10, 20},
+				{30, 10},
+			},
+			{
+				{28, 15},
+				{15, 21},
+				{22, 35},
+				{35, 35},
+				{28, 15},
+			},
+		}))
+	require.Equal(testPolygonCoords, pa.Coords())
+	require.Equal(testPolygonGoGeom, pa.Polygon)
+	// We have some helpers to make it easier, though.
+	pb := types.NewSFPolygonXY(
+		[][2]float64{
 			{30, 10},
 			{40, 40},
 			{20, 40},
 			{10, 20},
 			{30, 10},
-		}}))
-	require.Equal(testPolygonCoords, pa.Coords())
-	require.Equal(testPolygonGoGeom, pa.Polygon)
-
-	// We have some helpers to make it easier, though.
-	pb, err := types.NewSFPolygonXY([]geom.Coord{
-		{30, 10},
-		{40, 40},
-		{20, 40},
-		{10, 20},
-		{30, 10},
-	})
-	require.NoError(err)
-	pc, err := types.NewSFPolygonXYZ([]geom.Coord{
+		},
+		[][2]float64{
+			{28, 15},
+			{15, 21},
+			{22, 35},
+			{35, 35},
+			{28, 15},
+		})
+	require.Equal(
+		*geom.NewPolygon(geom.XY).MustSetCoords(
+			[][]geom.Coord{
+				{
+					{30, 10},
+					{40, 40},
+					{20, 40},
+					{10, 20},
+					{30, 10},
+				},
+				{
+					{28, 15},
+					{15, 21},
+					{22, 35},
+					{35, 35},
+					{28, 15},
+				},
+			}),
+		pb.Polygon)
+	pc := types.NewSFPolygonXYZ([][3]float64{
 		{30, 10, 1},
 		{40, 40, 2},
 		{20, 40, 3},
 		{10, 20, 4},
 		{30, 10, 5},
 	})
-	require.NoError(err)
-	pd, err := types.NewSFPolygonXYZM([]geom.Coord{
-		{30, 10, 1, 42},
-		{40, 40, 2, 42},
-		{20, 40, 3, 42},
-		{10, 20, 4, 42},
-		{30, 10, 5, 42},
-	})
-	require.NoError(err)
-
-	require.Equal(
-		*geom.NewPolygon(geom.XY).MustSetCoords(
-			[][]geom.Coord{{
-				{30, 10},
-				{40, 40},
-				{20, 40},
-				{10, 20},
-				{30, 10}},
-			}),
-		pb.Polygon)
 	require.Equal(
 		*geom.NewPolygon(geom.XYZ).MustSetCoords(
 			[][]geom.Coord{{
@@ -103,43 +151,27 @@ func TestSFPolygonCtors(t *testing.T) {
 				{30, 10, 5},
 			}}),
 		pc.Polygon)
-	require.Equal(
-		*geom.NewPolygon(geom.XYZM).MustSetCoords(
-			[][]geom.Coord{{
-				{30, 10, 1, 42},
-				{40, 40, 2, 42},
-				{20, 40, 3, 42},
-				{10, 20, 4, 42},
-				{30, 10, 5, 42},
-			}}),
-		pd.Polygon)
-
-	// If you do something bad with one of these constructors, you'll get the
-	// error expected from go-geom.
-	_, err = types.NewSFPolygonXY([]geom.Coord{
-		{30, 10, 1, 42},
-		{40, 40, 2, 42},
-		{20, 40, 3, 42},
-		{10, 20, 4, 42},
-		{30, 10, 5, 42},
-	})
-	require.Error(err) // geom: stride mismatch, got 4, want 2
 }
 
 func TestSFPolygonIsNil(t *testing.T) {
 	require := require.New(t)
 
-	p, _ := types.NewSFPolygonXY([]geom.Coord{
-		{30, 10},
-		{40, 40},
-		{20, 40},
-		{10, 20},
-		{30, 10}})
+	p := types.NewSFPolygonXY(testPolygonExternal, testPolygonInternal)
 	require.False(p.IsNil())
 
-	// NB. I consider this a defect, but it's how go-geom is implemented, so...
-	zero, _ := types.NewSFPolygonXY([]geom.Coord{})
+	malformed := types.NewSFPolygonXY([][2]float64{
+		{0.0, 0.0},
+		{0.0, 0.0},
+		{0.0, 0.0},
+		{0.0, 0.0},
+	})
+	require.False(malformed.IsNil())
+
+	zero := types.NewSFPolygonXY([][2]float64{})
 	require.True(zero.IsNil())
+
+	nul := types.NewSFPolygonXY(nil)
+	require.True(nul.IsNil())
 
 	empty := types.SFPolygon{}
 	require.True(empty.IsNil())
@@ -148,16 +180,22 @@ func TestSFPolygonIsNil(t *testing.T) {
 func TestSFPolygonIsZero(t *testing.T) {
 	require := require.New(t)
 
-	p, _ := types.NewSFPolygonXY([]geom.Coord{
-		{30, 10},
-		{40, 40},
-		{20, 40},
-		{10, 20},
-		{30, 10}})
+	p := types.NewSFPolygonXY(testPolygonExternal, testPolygonInternal)
 	require.False(p.IsZero())
 
-	zero, _ := types.NewSFPolygonXY([]geom.Coord{})
+	malformed := types.NewSFPolygonXY([][2]float64{
+		{0.0, 0.0},
+		{0.0, 0.0},
+		{0.0, 0.0},
+		{0.0, 0.0},
+	})
+	require.True(malformed.IsZero())
+
+	zero := types.NewSFPolygonXY([][2]float64{})
 	require.True(zero.IsZero())
+
+	nul := types.NewSFPolygonXY(nil)
+	require.True(nul.IsZero())
 
 	empty := types.SFPolygon{}
 	require.True(empty.IsZero())
@@ -168,14 +206,7 @@ func TestSFPolygonSQLValue(t *testing.T) {
 	var val driver.Value
 	var err error
 
-	p, err := types.NewSFPolygonXY([]geom.Coord{
-		{30, 10},
-		{40, 40},
-		{20, 40},
-		{10, 20},
-		{30, 10},
-	})
-	require.NoError(err)
+	p := types.NewSFPolygonXY(testPolygonExternal, testPolygonInternal)
 	val, err = p.Value()
 	require.NoError(err)
 	require.EqualValues(testPolygonWKB, val)
@@ -188,14 +219,7 @@ func TestSFPolygonSQLScan(t *testing.T) {
 	var p types.SFPolygon
 	err = p.Scan(driver.Value(testPolygonWKB))
 	require.NoError(err)
-	require.Equal(
-		[][]geom.Coord{{
-			{30, 10},
-			{40, 40},
-			{20, 40},
-			{10, 20},
-			{30, 10},
-		}}, p.Coords())
+	require.Equal(testPolygonCoords, p.Coords())
 
 	var bad types.SFPolygon
 	err = bad.Scan(driver.Value(nil))
@@ -207,13 +231,7 @@ func TestSFPolygonMarshalJSON(t *testing.T) {
 	var data []byte
 	var err error
 
-	p, _ := types.NewSFPolygonXY([]geom.Coord{
-		{30, 10},
-		{40, 40},
-		{20, 40},
-		{10, 20},
-		{30, 10},
-	})
+	p := types.NewSFPolygonXY(testPolygonExternal, testPolygonInternal)
 	data, err = json.Marshal(p)
 	require.NoError(err)
 	require.EqualValues(testPolygonGeoJSON, data)
@@ -235,13 +253,7 @@ func TestSFPolygonUnmarshalJSON(t *testing.T) {
 	var p types.SFPolygon
 	err = json.Unmarshal(testPolygonGeoJSON, &p)
 	require.NoError(err)
-	require.Equal([][]geom.Coord{{
-		{30, 10},
-		{40, 40},
-		{20, 40},
-		{10, 20},
-		{30, 10},
-	}}, p.Coords())
+	require.Equal(testPolygonCoords, p.Coords())
 }
 
 func TestSFPolygonMarshsalMapValue(t *testing.T) {
@@ -251,29 +263,11 @@ func TestSFPolygonMarshsalMapValue(t *testing.T) {
 	var data map[string]interface{}
 	var err error
 
-	wrapper = Wrapper{*types.MustSFPolygon(types.NewSFPolygonXY([]geom.Coord{
-		{30, 10},
-		{40, 40},
-		{20, 40},
-		{10, 20},
-		{30, 10},
-	}))}
+	wrapper = Wrapper{types.NewSFPolygonXY(testPolygonExternal, testPolygonInternal)}
 	data, err = maps.Marshal(wrapper)
 	require.NoError(err)
-	require.Equal(*types.MustSFPolygon(types.NewSFPolygonXY([]geom.Coord{
-		{30, 10},
-		{40, 40},
-		{20, 40},
-		{10, 20},
-		{30, 10},
-	})), data["Polygon"])
+	require.Equal(types.NewSFPolygon(testPolygonGoGeom), data["Polygon"])
 	data, err = maps.Marshal(&wrapper)
 	require.NoError(err)
-	require.Equal(*types.MustSFPolygon(types.NewSFPolygonXY([]geom.Coord{
-		{30, 10},
-		{40, 40},
-		{20, 40},
-		{10, 20},
-		{30, 10},
-	})), data["Polygon"])
+	require.Equal(types.NewSFPolygon(testPolygonGoGeom), data["Polygon"])
 }
