@@ -115,9 +115,9 @@ func (p SFPolygon) Value() (driver.Value, error) {
 
 // Scan implements the database/sql Scanner interface. It expects to receive a
 // valid WKB encoded []byte describing a Polygon, or NULL as a nil from
-// an SQL database. A nil will be considered NULL, and p will be nulled.
-// Otherwise, the value will be passed to types.SFPolygon to be scanned and
-// parsed as a WKB Polygon.
+// an SQL database. A zero-length or nil []byte will be considered NULL, and p
+// will be nulled. Otherwise, the value will be passed to types.SFPolygon to be
+// scanned and parsed as a WKB Polygon.
 func (p *SFPolygon) Scan(src interface{}) error {
 	if p == nil {
 		return fmt.Errorf("null.SFPolygon: Scan called on nil pointer")
@@ -127,6 +127,11 @@ func (p *SFPolygon) Scan(src interface{}) error {
 		p.Valid = false
 		return nil
 	case []byte:
+		if len(x) == 0 {
+			p.Polygon = types.SFPolygon{}
+			p.Valid = false
+			return nil
+		}
 		err := p.Polygon.Scan(x)
 		if err != nil {
 			return err
