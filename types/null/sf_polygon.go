@@ -129,7 +129,6 @@ func (p *SFPolygon) Scan(src interface{}) error {
 	case []byte:
 		err := p.Polygon.Scan(x)
 		if err != nil {
-			p.Valid = false
 			return err
 		}
 		p.Valid = true

@@ -80,12 +80,11 @@ func (p *SFPoint) Set(v types.SFPoint) {
 	p.Valid = true
 }
 
-// SetXY will set the coordinates of p. If the coordinates are invalid, the
+// SetCoords will set the coordinates of p. If the coordinates are invalid, the
 // SFPoint will contain no valid value, and an error will be returned.
 func (p *SFPoint) SetCoords(c ...float64) error {
 	_, err := p.Point.SetCoords(c)
 	if err != nil {
-		p.Valid = false
 		return err
 	}
 
@@ -142,7 +141,6 @@ func (p *SFPoint) Scan(src interface{}) error {
 	case []byte:
 		err := p.Point.Scan(x)
 		if err != nil {
-			p.Valid = false
 			return err
 		}
 		p.Valid = true
