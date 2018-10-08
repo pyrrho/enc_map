@@ -106,7 +106,7 @@ func (p SFPoint) Value() (driver.Value, error) {
 }
 
 // Scan implements the database/sql Scanner interface. It expects to receive a
-// WKB encoded byte describing a Point from an SQL database, and will assign
+// WKB encoded []byte describing a Point from an SQL database, and will assign
 // that value to p. If the incoming []byte is not a well formed WKB, or if that
 // WKB value does not describe a Point, an error will be returned.
 func (p *SFPoint) Scan(src interface{}) error {
@@ -139,7 +139,7 @@ func (p SFPoint) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the encoding/json Unmarshaler interface. It expects
-// to receive a valid GeoJSON Geometry with of the type Point, and will assign
+// to receive a valid GeoJSON Geometry of the type Point, and will assign
 // the value of that data to p.
 func (p *SFPoint) UnmarshalJSON(data []byte) error {
 	if p == nil {

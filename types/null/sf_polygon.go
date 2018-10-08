@@ -27,10 +27,10 @@ func NullSFPolygon() SFPolygon {
 }
 
 // NewSFPolygon constructs and returns a new SFPolygon object based on the given
-// types.SFPolygon p. If p is of zero-value, the new SFPolygon will be null.
+// types.SFPolygon p. If p is nil, the new SFPolygon will be null.
 // Otherwise a new, valid SFPolygon will be initialized with a copy of p.
 func NewSFPolygon(p types.SFPolygon) SFPolygon {
-	if p.IsZero() {
+	if p.IsNil() {
 		return NullSFPolygon()
 	}
 	return SFPolygon{
@@ -72,7 +72,7 @@ func (p SFPolygon) ValueOrZero() types.SFPolygon {
 // p will be nulled.
 func (p *SFPolygon) Set(v types.SFPolygon) {
 	if v.IsNil() {
-		p.Polygon = types.SFPolygon{} // Let the garbage collector have this types.SFPolygon.
+		p.Polygon = types.SFPolygon{}
 		p.Valid = false
 		return
 	}
@@ -83,7 +83,7 @@ func (p *SFPolygon) Set(v types.SFPolygon) {
 // Null will set p to null; p.Valid will be false, and p.Polygon will contain no
 // meaningful value.
 func (p *SFPolygon) Null() {
-	p.Polygon = types.SFPolygon{} // Let the garbage collector have this types.SFPolygon.
+	p.Polygon = types.SFPolygon{}
 	p.Valid = false
 }
 
@@ -105,10 +105,7 @@ func (p SFPolygon) IsZero() bool {
 }
 
 // Value implements the database/sql/driver Valuer interface. It will return the
-// value of p as a driver.Value. If p is valid, this function will first
-// validate the contained SFPolygon returning either any encouted parsing errors,
-// or a []byte as a driver.Value. If p is null, nil will be returned, and no
-// validation will occur.
+// value of p as a driver.Value. If p is null, nil will be returned.
 func (p SFPolygon) Value() (driver.Value, error) {
 	if !p.Valid {
 		return nil, nil
@@ -117,28 +114,21 @@ func (p SFPolygon) Value() (driver.Value, error) {
 }
 
 // Scan implements the database/sql Scanner interface. It expects to receive a
-// valid WKB encoded byte describing a Polygon as a []byte, or NULL as a nil
-// from an SQL database. A zero-length []byte or a nil will be considered NULL,
-// and p will be nulled. Otherwise, the value will be passed to types.SFPolygon
-// to be scanned and parsed as a WKB Polygon.
+// valid WKB encoded []byte describing a Polygon, or NULL as a nil from
+// an SQL database. A nil will be considered NULL, and p will be nulled.
+// Otherwise, the value will be passed to types.SFPolygon to be scanned and
+// parsed as a WKB Polygon.
 func (p *SFPolygon) Scan(src interface{}) error {
 	if p == nil {
 		return fmt.Errorf("null.SFPolygon: Scan called on nil pointer")
 	}
 	switch x := src.(type) {
 	case nil:
-		p.Polygon = types.SFPolygon{}
 		p.Valid = false
 		return nil
 	case []byte:
-		if len(x) == 0 {
-			p.Polygon = types.SFPolygon{}
-			p.Valid = false
-			return nil
-		}
 		err := p.Polygon.Scan(x)
 		if err != nil {
-			p.Polygon = types.SFPolygon{}
 			p.Valid = false
 			return err
 		}
@@ -150,10 +140,7 @@ func (p *SFPolygon) Scan(src interface{}) error {
 }
 
 // MarshalJSON implements the encoding/json Marshaler interface. It will return
-// the value of p as a JSON-encoded []byte. If p is valid, this function will
-// first validate the contained JSON returning either any encouted parsing
-// errors, or a []byte. If p is null, "null" will be returned, and no validation
-// will occur.
+// the GeoJSON encoded representation of p, or "null" if p is null.
 func (p SFPolygon) MarshalJSON() ([]byte, error) {
 	if !p.Valid {
 		return []byte("null"), nil
@@ -162,9 +149,9 @@ func (p SFPolygon) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the encoding/json Unmarshaler interface. It expects
-// to receive a valid JSON value, and will assign that value to this SFPolygon. If
-// the incoming JSON is the 'null' keyword, p will be nulled. UnmarshalJSON will
-// validate the incoming JSON as part of the "Is this JSON null?" check.
+// to receive a valid GeoJSON Geometry of the type Polygon, and will assign
+// the value of that data to p. If the incoming JSON is the 'null' keyword,
+// p will have no valid value.
 func (p *SFPolygon) UnmarshalJSON(data []byte) error {
 	if p == nil {
 		return fmt.Errorf("null.SFPolygon: UnmarshalJSON called on nil pointer")
@@ -178,7 +165,9 @@ func (p *SFPolygon) UnmarshalJSON(data []byte) error {
 		p.Valid = false
 		return nil
 	}
-	p.Polygon.UnmarshalJSON(data)
+	if err := p.Polygon.UnmarshalJSON(data); err != nil {
+		return err
+	}
 	p.Valid = true
 	return nil
 }

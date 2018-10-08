@@ -40,7 +40,7 @@ func NewJSON(j types.RawJSON) RawJSON {
 }
 
 // NewJSONStr constructs and returns a new RawJSON object based on the given
-// string s. If s is an empty string, the new RawJSON will be null. Otherwise s
+// string s. If s is the empty string, the new RawJSON will be null. Otherwise s
 // will be cast to types.RawJSON and used to initialize the new valid RawJSON.
 func NewJSONStr(s string) RawJSON {
 	if len(s) == 0 {
