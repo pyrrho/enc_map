@@ -75,7 +75,7 @@ func (j *RawJSON) Set(v types.RawJSON) {
 	j.Valid = true
 }
 
-// SetStr will copy the contents of v into j. If the given value is the empty
+// SetStr will copy the contents of v into j. If the given value is an empty
 // string, j will be nulled.
 func (j *RawJSON) SetStr(v string) {
 	if len(v) == 0 {

@@ -124,7 +124,7 @@ func (p SFPolygon) Value() (driver.Value, error) {
 }
 
 // Scan implements the database/sql Scanner interface. It expects to receive a
-// WKB encoded byte describing a Polygon from an SQL database, and will assign
+// WKB encoded []byte describing a Polygon from an SQL database, and will assign
 // that value to p. If the incoming []byte is not a well formed WKB, or if that
 // WKB value does not describe a Polygon, an error will be returned.
 func (p *SFPolygon) Scan(src interface{}) error {
