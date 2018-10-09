@@ -263,8 +263,7 @@ func TestSFPolygonMarshsalMapValue(t *testing.T) {
 	var data map[string]interface{}
 	var err error
 
-	wrapper = Wrapper{
-		types.NewSFPolygonXY(testPolygonExternal, testPolygonInternal)}
+	wrapper = Wrapper{types.NewSFPolygonXY(testPolygonExternal, testPolygonInternal)}
 	data, err = maps.Marshal(wrapper)
 	require.NoError(err)
 	require.Equal(types.NewSFPolygon(testPolygonGoGeom), data["Polygon"])
