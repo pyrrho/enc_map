@@ -29,35 +29,32 @@ func TestSFPointCtors(t *testing.T) {
 	require := require.New(t)
 
 	// null.NullSFPoint returns a new null null.SFPoint.
-	// This is equivalwent to null.SFPoint{}.
-	pa := null.NullSFPoint()
-	require.False(pa.Valid)
+	// This is equivalent to null.SFPoint{}.
+	na := null.NullSFPoint()
+	require.False(na.Valid)
 
 	// Passing a nil types.SFPoint to null.NewSFPoint does the same thing.
-	pb := null.NewSFPoint(types.SFPoint{})
-	require.False(pb.Valid)
+	nb := null.NewSFPoint(types.SFPoint{})
+	require.False(nb.Valid)
 
 	// Passing a non-nil types.SFPoint constructs a new, valid null.SFPoint.
-	pc := null.NewSFPoint(testSFPointXY)
-	require.True(pc.Valid)
-	require.Equal(testSFPointXY, pc.Point)
+	pa := null.NewSFPoint(testSFPointXY)
+	require.True(pa.Valid)
+	require.Equal(testSFPointXY, pa.Point)
 
 	// You can also create null.SFPoints by passing coordinates.
-	pd := null.NewSFPointXY(1.2, 2.3)
-	require.Equal(testSFPointXY, pd.Point)
+	pb := null.NewSFPointXY(1.2, 2.3)
+	require.Equal(testSFPointXY, pb.Point)
 
-	pe := null.NewSFPointXYZ(1.2, 2.3, 3.4)
-	require.Equal(testSFPointXYZ, pe.Point)
+	pc := null.NewSFPointXYZ(1.2, 2.3, 3.4)
+	require.Equal(testSFPointXYZ, pc.Point)
 }
 
 func TestSFPointValueOrZero(t *testing.T) {
 	require := require.New(t)
 
-	pa := null.NewSFPoint(testSFPointXY)
-	require.EqualValues(testSFPointXY, pa.ValueOrZero())
-
-	pb := null.NewSFPoint(testSFPointXYZ)
-	require.EqualValues(testSFPointXYZ, pb.ValueOrZero())
+	p := null.NewSFPoint(testSFPointXY)
+	require.EqualValues(testSFPointXY, p.ValueOrZero())
 
 	n := null.SFPoint{}
 	require.EqualValues(types.SFPoint{}, n.ValueOrZero())

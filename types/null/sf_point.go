@@ -90,7 +90,7 @@ func (p *SFPoint) Null() {
 // Interfaces
 
 // IsNil implements the pyrrho/encoding IsNiler interface. It will return true
-// if j is null.
+// if p is null.
 func (p SFPoint) IsNil() bool {
 	return !p.Valid
 }
