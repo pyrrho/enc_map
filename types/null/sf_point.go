@@ -80,18 +80,6 @@ func (p *SFPoint) Set(v types.SFPoint) {
 	p.Valid = true
 }
 
-// SetCoords will set the coordinates of p. If the coordinates are invalid, the
-// SFPoint will contain no valid value, and an error will be returned.
-func (p *SFPoint) SetCoords(c ...float64) error {
-	_, err := p.Point.SetCoords(c)
-	if err != nil {
-		return err
-	}
-
-	p.Valid = true
-	return nil
-}
-
 // Null will set p to null; p.Valid will be false, and p.Point will contain no
 // meaningful value.
 func (p *SFPoint) Null() {

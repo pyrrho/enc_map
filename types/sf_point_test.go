@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/pyrrho/encoding/maps"
-
-	"github.com/pyrrho/encoding/types"
 	"github.com/stretchr/testify/require"
 	"github.com/twpayne/go-geom"
+
+	"github.com/pyrrho/encoding/maps"
+	"github.com/pyrrho/encoding/types"
 )
 
 var (
