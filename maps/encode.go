@@ -26,7 +26,13 @@ func MarshalSlice(src interface{}) ([]map[string]interface{}, error) {
 	return ret, nil
 }
 
-func MarshalWithConfig(src interface{}, cfg *Config) (map[string]interface{}, error) {
+type Marshaler interface {
+	MarshalMapValue() (interface{}, error)
+}
+
+var marshalerType = reflect.TypeOf(new(Marshaler)).Elem()
+
+func (cfg *Config) Marshal(src interface{}) (m map[string]interface{}, err error) {
 	ret, err := cfg.marshal(src)
 	if err != nil {
 		return nil, err
@@ -34,19 +40,13 @@ func MarshalWithConfig(src interface{}, cfg *Config) (map[string]interface{}, er
 	return ret, nil
 }
 
-func MarshalSliceWithConfig(src interface{}, cfg *Config) ([]map[string]interface{}, error) {
+func (cfg *Config) MarshalSlice(src interface{}) (m []map[string]interface{}, err error) {
 	ret, err := cfg.marshalSlice(src)
 	if err != nil {
 		return nil, err
 	}
 	return ret, nil
 }
-
-type Marshaler interface {
-	MarshalMapValue() (interface{}, error)
-}
-
-var marshalerType = reflect.TypeOf(new(Marshaler)).Elem()
 
 func (cfg *Config) marshal(src interface{}) (m map[string]interface{}, err error) {
 	srcv := reflect.ValueOf(src)
