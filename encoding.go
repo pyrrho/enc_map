@@ -1,3 +1,9 @@
+/*
+Package encoding is an extension to the Go Standard Library's encoding
+(https://godoc.org/encoding) package. It defines interfaces and helper
+functions shared by other packages (specifically the sub-packages of this
+library).
+*/
 package encoding
 
 import (

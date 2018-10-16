@@ -22,7 +22,7 @@ func parseTag(tag string) (string, tagOptions) {
 	return name, opts
 }
 
-func (opts tagOptions) Contain(option string) bool {
+func (opts tagOptions) Contains(option string) bool {
 	_, ok := opts[strings.ToLower(option)]
 	return ok
 }

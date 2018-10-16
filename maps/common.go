@@ -167,19 +167,19 @@ func typeFields(t reflect.Type, cfg *Config) []field {
 					name = sf.Name
 				}
 				omitZero := cfg.OmitZero
-				if opts.Contain("omitZero") {
+				if opts.Contains("omitZero") {
 					omitZero = true
-				} else if opts.Contain("noOmitZero") {
+				} else if opts.Contains("noOmitZero") {
 					omitZero = false
 				}
 				omitNil := cfg.OmitNil
-				if opts.Contain("omitNil") {
+				if opts.Contains("omitNil") {
 					omitNil = true
-				} else if opts.Contain("noOmitNil") {
+				} else if opts.Contains("noOmitNil") {
 					omitNil = false
 				}
 				asValue := false
-				if opts.Contain("value") {
+				if opts.Contains("value") {
 					asValue = true
 				}
 
