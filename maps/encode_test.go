@@ -320,7 +320,7 @@ type MarshalerImplementor struct {
 	Constant int
 }
 
-func (mi *MarshalerImplementor) MarshalMapValue() (interface{}, error) {
+func (mi MarshalerImplementor) MarshalMapValue() (interface{}, error) {
 	return map[string]int{
 		"Arr0": mi.AnArray[0] + mi.Constant,
 		"Arr1": mi.AnArray[1] + mi.Constant,

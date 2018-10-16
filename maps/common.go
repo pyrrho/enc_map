@@ -9,15 +9,11 @@ import (
 )
 
 type Config struct {
-	TagName  string
-	OmitZero bool
-	OmitNil  bool
+	TagName string
 }
 
 var defaultConfig = &Config{
-	TagName:  "map",
-	OmitZero: false,
-	OmitNil:  false,
+	TagName: "map",
 }
 
 // The below code is a lightly editied version of code written by the Go Authors
@@ -38,9 +34,7 @@ type field struct {
 	index  []int
 	typ    reflect.Type
 
-	omitZero bool
-	omitNil  bool
-	asValue  bool
+	options tagOptions
 }
 
 func fillField(f field) field {
@@ -166,22 +160,6 @@ func typeFields(t reflect.Type, cfg *Config) []field {
 				if name == "" {
 					name = sf.Name
 				}
-				omitZero := cfg.OmitZero
-				if opts.Contains("omitZero") {
-					omitZero = true
-				} else if opts.Contains("noOmitZero") {
-					omitZero = false
-				}
-				omitNil := cfg.OmitNil
-				if opts.Contains("omitNil") {
-					omitNil = true
-				} else if opts.Contains("noOmitNil") {
-					omitNil = false
-				}
-				asValue := false
-				if opts.Contains("value") {
-					asValue = true
-				}
 
 				index := make([]int, len(f.index)+1)
 				copy(index, f.index)
@@ -197,13 +175,11 @@ func typeFields(t reflect.Type, cfg *Config) []field {
 				// Record the found field and index sequence ...
 				if tagged || !isEmbedded || sft.Kind() != reflect.Struct {
 					fields = append(fields, fillField(field{
-						name:     name,
-						tagged:   tagged,
-						index:    index,
-						typ:      sft,
-						omitZero: omitZero,
-						omitNil:  omitNil,
-						asValue:  asValue,
+						name:    name,
+						tagged:  tagged,
+						index:   index,
+						typ:     sft,
+						options: opts,
 					}))
 					if count[f.typ] > 1 {
 						// If there were multiple instances, add a second, so

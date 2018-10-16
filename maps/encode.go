@@ -277,8 +277,8 @@ func (se *structEncoder) encode(src reflect.Value, cfg *Config) interface{} {
 	for i, f := range se.fields {
 		fv := fieldByIndex(src, f.index)
 		if !fv.IsValid() ||
-			(f.omitZero && encoding.IsValueZero(fv)) ||
-			(f.omitNil && encoding.IsValueNil(fv)) {
+			(f.options.Contains("omitZero") && encoding.IsValueZero(fv)) ||
+			(f.options.Contains("omitNil") && encoding.IsValueNil(fv)) {
 			continue
 		}
 		if !src.CanInterface() {
@@ -296,7 +296,7 @@ func newStructEncoder(t reflect.Type, cfg *Config) encodeFn {
 		fieldEncs: make([]encodeFn, len(fields)),
 	}
 	for i, f := range fields {
-		if f.asValue {
+		if f.options.Contains("value") {
 			se.fieldEncs[i] = encodeInterface
 		} else {
 			se.fieldEncs[i] = lookupEncodeFn(typeByIndex(t, f.index), cfg)
