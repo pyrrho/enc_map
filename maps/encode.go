@@ -32,7 +32,7 @@ type Marshaler interface {
 
 var marshalerType = reflect.TypeOf(new(Marshaler)).Elem()
 
-func (cfg *Config) Marshal(src interface{}) (m map[string]interface{}, err error) {
+func (cfg *Config) Marshal(src interface{}) (map[string]interface{}, error) {
 	ret, err := cfg.marshal(src)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func (cfg *Config) Marshal(src interface{}) (m map[string]interface{}, err error
 	return ret, nil
 }
 
-func (cfg *Config) MarshalSlice(src interface{}) (m []map[string]interface{}, err error) {
+func (cfg *Config) MarshalSlice(src interface{}) ([]map[string]interface{}, error) {
 	ret, err := cfg.marshalSlice(src)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (cfg *Config) marshal(src interface{}) (m map[string]interface{}, err error
 	return ret.(map[string]interface{}), nil
 }
 
-func (cfg *Config) marshalSlice(src interface{}) (ret []map[string]interface{}, err error) {
+func (cfg *Config) marshalSlice(src interface{}) (m []map[string]interface{}, err error) {
 	srcv := reflect.ValueOf(src)
 	if srcv.Kind() == reflect.Ptr {
 		srcv = srcv.Elem()
@@ -104,15 +104,15 @@ func (cfg *Config) marshalSlice(src interface{}) (ret []map[string]interface{}, 
 		}
 	}()
 
-	ret = make([]map[string]interface{}, srcv.Len())
+	m = make([]map[string]interface{}, srcv.Len())
 	for i := 0; i < srcv.Len(); i++ {
 		elemv := srcv.Index(i)
 		if elemv.Kind() == reflect.Ptr || elemv.Kind() == reflect.Interface {
 			elemv = elemv.Elem()
 		}
-		ret[i] = (lookupEncodeFn(elemv.Type(), cfg)(elemv, cfg)).(map[string]interface{})
+		m[i] = (lookupEncodeFn(elemv.Type(), cfg)(elemv, cfg)).(map[string]interface{})
 	}
-	return ret, nil
+	return m, nil
 }
 
 type encodeFn func(src reflect.Value, cfg *Config) interface{}
