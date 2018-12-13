@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"github.com/relvacode/iso8601"
 	"time"
 )
 
@@ -36,14 +37,14 @@ func NewTime(t time.Time) Time {
 	}
 }
 
-// NewTimeStr parses a given string, s, as an RFC 3339 and returns
+// NewTimeStr parses a given string, s, as an ISO 8601 and returns
 func NewTimeStr(s string) (Time, error) {
 	if len(s) == 0 {
 		return Time{}, nil
 	}
 
 	var tmp time.Time
-	tmp, err := time.Parse(time.RFC3339, s)
+	tmp, err := iso8601.Parse([]byte(s))
 	if err != nil {
 		return Time{}, err
 	}
@@ -133,7 +134,7 @@ func (t Time) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements the encoding/json Unmarshaler interface. It will
 // decode a given []byte into t so long as the provided []byte
-// is a valid JSON representation of an RFC 3339 string. Empty strings and
+// is a valid JSON representation of an ISO 8601 string. Empty strings and
 // the 'null' keyword will both decode into a null NullTime.
 //
 // If the decode fails, the value of t will be unchanged.
@@ -155,7 +156,7 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 		// TODO: If time.Time.UnmarshalJSON doesn't change the value of the
 		// receiver we could skip the temporary object by calling .UnmarshalJSON
 		// on t.Time.
-		tmp, err := time.Parse(time.RFC3339, val)
+		tmp, err := iso8601.Parse([]byte(val))
 		if err != nil {
 			return err
 		}
