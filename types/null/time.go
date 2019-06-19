@@ -9,7 +9,7 @@ import (
 )
 
 // Time is a nullable wrapper around the time.Time type implementing all of the
-// the pyrrho/encoding/types interfaces detailed in the package comments.
+// pyrrho/encoding/types interfaces detailed in the package comments.
 //
 // If the Time is valid and contains the zero time instant, it will be
 // considered non-null, and of zero value.
