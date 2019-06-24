@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"reflect"
 	"strconv"
 )
 
@@ -89,16 +90,32 @@ func (i Uint8) Value() (driver.Value, error) {
 // type nil, uint8, string, or another integer or float type that doesn't
 // overflow uint8. All other types will result in an error.
 func (i *Uint8) Scan(src interface{}) error {
-	// Helpers for repetitive int scans
-	scanUint := func(src interface{}, vi uint64) error {
+	if i == nil {
+		return fmt.Errorf("null.Uint8: Scan called on nil pointer")
+	}
+	if src == nil {
+		i.Uint8 = 0
+		i.Valid = false
+		return nil
+	}
+
+	switch val := src.(type) {
+	case uint8:
+		i.Uint8 = val
+		i.Valid = true
+		return nil
+	case uint, uint16, uint32, uint64:
+		v := reflect.ValueOf(src)
+		vi := v.Uint()
 		if vi > math.MaxUint8 {
 			return fmt.Errorf("null.Uint8: failed to scan type %T (%v): overflow", src, src)
 		}
 		i.Uint8 = uint8(vi)
 		i.Valid = true
 		return nil
-	}
-	scanInt := func(src interface{}, vi int64) error {
+	case int, int8, int16, int32, int64:
+		v := reflect.ValueOf(src)
+		vi := v.Int()
 		if vi > math.MaxUint8 {
 			return fmt.Errorf("null.Uint8: failed to scan type %T (%v): overflow", src, src)
 		} else if vi < 0 {
@@ -107,40 +124,6 @@ func (i *Uint8) Scan(src interface{}) error {
 		i.Uint8 = uint8(vi)
 		i.Valid = true
 		return nil
-	}
-
-	if src == nil {
-		i.Uint8 = 0
-		i.Valid = false
-		return nil
-	}
-	if i == nil {
-		return fmt.Errorf("null.Uint8: Scan called on nil pointer")
-	}
-
-	switch val := src.(type) {
-	case uint8:
-		i.Uint8 = val
-		i.Valid = true
-		return nil
-	case uint:
-		return scanUint(src, uint64(val))
-	case uint16:
-		return scanUint(src, uint64(val))
-	case uint32:
-		return scanUint(src, uint64(val))
-	case uint64:
-		return scanUint(src, uint64(val))
-	case int:
-		return scanInt(src, int64(val))
-	case int8:
-		return scanInt(src, int64(val))
-	case int16:
-		return scanInt(src, int64(val))
-	case int32:
-		return scanInt(src, int64(val))
-	case int64:
-		return scanInt(src, int64(val))
 	case string:
 		parsedUint, err := strconv.ParseUint(val, 10, 0)
 		if err != nil {
@@ -170,10 +153,6 @@ func (i *Uint8) Scan(src interface{}) error {
 		}
 		i.Uint8 = uint8(parsedUint)
 		i.Valid = true
-		return nil
-	case nil:
-		i.Uint8 = 0
-		i.Valid = false
 		return nil
 	default:
 		return fmt.Errorf("null.Uint8: cannot scan type %T (%v)", src, src)
