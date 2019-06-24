@@ -4,7 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"reflect"
+	"math"
 	"strconv"
 )
 
@@ -86,43 +86,89 @@ func (i Uint8) Value() (driver.Value, error) {
 
 // Scan implements the database/sql Scanner interface. It will receive a value
 // from an SQL database and assign it to i, so long as the provided data is of
-// type nil, uint8, string, or another integer type that doesn't overflow uint8.
-// All other types will result in an error.
+// type nil, uint8, string, or another integer or float type that doesn't
+// overflow uint8. All other types will result in an error.
 func (i *Uint8) Scan(src interface{}) error {
+	// Helpers for repetitive int scans
+	scanUint := func(src interface{}, vi uint64) error {
+		if vi > math.MaxUint8 {
+			return fmt.Errorf("null.Uint8: failed to scan type %T (%v): overflow", src, src)
+		}
+		i.Uint8 = uint8(vi)
+		i.Valid = true
+		return nil
+	}
+	scanInt := func(src interface{}, vi int64) error {
+		if vi > math.MaxUint8 {
+			return fmt.Errorf("null.Uint8: failed to scan type %T (%v): overflow", src, src)
+		} else if vi < 0 {
+			return fmt.Errorf("null.Uint8: failed to scan type %T (%v): negative value", src, src)
+		}
+		i.Uint8 = uint8(vi)
+		i.Valid = true
+		return nil
+	}
+
+	if src == nil {
+		i.Uint8 = 0
+		i.Valid = false
+		return nil
+	}
 	if i == nil {
 		return fmt.Errorf("null.Uint8: Scan called on nil pointer")
 	}
+
 	switch val := src.(type) {
 	case uint8:
 		i.Uint8 = val
 		i.Valid = true
 		return nil
+	case uint:
+		return scanUint(src, uint64(val))
+	case uint16:
+		return scanUint(src, uint64(val))
+	case uint32:
+		return scanUint(src, uint64(val))
+	case uint64:
+		return scanUint(src, uint64(val))
+	case int:
+		return scanInt(src, int64(val))
+	case int8:
+		return scanInt(src, int64(val))
+	case int16:
+		return scanInt(src, int64(val))
+	case int32:
+		return scanInt(src, int64(val))
+	case int64:
+		return scanInt(src, int64(val))
 	case string:
 		parsedUint, err := strconv.ParseUint(val, 10, 0)
 		if err != nil {
-			return fmt.Errorf("null.Uint8: failed to scan type %T (%v): %v", val, src, err)
+			return fmt.Errorf("null.Uint8: failed to scan type %T (%v): %v", src, src, err)
 		}
 		i.Uint8 = uint8(parsedUint)
 		i.Valid = true
 		return nil
-	case uint, uint16, uint32, uint64:
-		rv := reflect.ValueOf(src)
-		str := strconv.FormatUint(rv.Uint(), 10)
-		parsedUint, err := strconv.ParseUint(str, 10, 8)
+	case float64:
+		// Use a string intermediate so we can generate an error on any loss of
+		// precision.
+		s := strconv.FormatFloat(val, 'g', -1, 64)
+		parsedUint, err := strconv.ParseInt(s, 10, 8)
 		if err != nil {
-			return fmt.Errorf("null.Uint8: failed to scan type %T (%v): %v", val, src, err)
+			return fmt.Errorf("null.Uint8: failed to convert driver.Value type %T (%v): %v", src, s, err)
 		}
 		i.Uint8 = uint8(parsedUint)
 		i.Valid = true
 		return nil
-	case int, int8, int16, int32, int64:
-		rv := reflect.ValueOf(src)
-		str := strconv.FormatInt(rv.Int(), 10)
-		parsedInt, err := strconv.ParseUint(str, 10, 8)
+	case float32:
+		// Use a string intermediate so we can generate an error on any loss of
+		// precision.
+		s := strconv.FormatFloat(float64(val), 'g', -1, 32)
+		parsedUint, err := strconv.ParseInt(s, 10, 8)
 		if err != nil {
-			return fmt.Errorf("null.Uint8: failed to scan type %T (%v): %v", val, src, err)
+			return fmt.Errorf("null.Uint8: failed to convert driver.Value type %T (%v): %v", src, s, err)
 		}
-		i.Uint8 = uint8(parsedInt)
+		i.Uint8 = uint8(parsedUint)
 		i.Valid = true
 		return nil
 	case nil:
@@ -130,7 +176,7 @@ func (i *Uint8) Scan(src interface{}) error {
 		i.Valid = false
 		return nil
 	default:
-		return fmt.Errorf("null.Uint8: cannot scan type %T (%v)", val, src)
+		return fmt.Errorf("null.Uint8: cannot scan type %T (%v)", src, src)
 	}
 }
 
