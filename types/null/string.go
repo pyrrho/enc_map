@@ -12,6 +12,7 @@ import (
 //
 // If the String is valid and contains the empty string, it will be considered
 // non-nil, and of zero value.
+// swagger:strfmt nullable-string
 type String struct {
 	sql.NullString
 }
@@ -84,7 +85,7 @@ func (s String) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements the encoding/json Unmarshaler interface. It will
 // decode a given []byte into s, so long as the provided []byte is a valid JSON
-//string or a null.
+// string or a null.
 //
 // An empty string will result in a valid-but-empty String. The keyword 'null'
 // will result in a null String. The string '"null"' is considered to be a
@@ -122,4 +123,24 @@ func (s String) MarshalMapValue() (interface{}, error) {
 		return s.String, nil
 	}
 	return nil, nil
+}
+
+// MarshalText implements the encoding TextMarshaler interface. It will return
+// the value of s as a []byte if valid, otherwise nil.
+func (s String) MarshalText() ([]byte, error) {
+	if !s.Valid {
+		return nil, nil
+	}
+	return []byte(s.String), nil
+}
+
+// UnmarshalText implements the encoding TextUnmarshaler interface. It will
+// store a given []byte as a string in s.
+func (s *String) UnmarshalText(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("null.String: UnmarshalText called on nil pointer")
+	}
+	s.String = string(data)
+	s.Valid = true
+	return nil
 }
