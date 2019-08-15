@@ -65,6 +65,7 @@ func (t Time) SetStr(s string) error {
 	}
 
 	t.Time = tmp
+	return nil
 }
 
 // Interfaces
@@ -82,13 +83,9 @@ func (t Time) IsZero() bool {
 	return t.Time.IsZero()
 }
 
-// Value implements the database/sql/driver Valuer interface. As time.Time and
-// nil are both valid types to be stored in a driver.Value, it will return this
-// NullTime's value if valid, or nil otherwise.
+// Value implements the database/sql/driver Valuer interface. It returns the
+// time stored in t.
 func (t Time) Value() (driver.Value, error) {
-	if !t.Valid {
-		return nil, nil
-	}
 	return t.Time, nil
 }
 
