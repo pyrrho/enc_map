@@ -13,6 +13,7 @@ import (
 //
 // If the Time is valid and contains the zero time instant, it will be
 // considered non-null, and of zero value.
+// swagger:strfmt date-time
 type Time struct {
 	Time  time.Time
 	Valid bool
