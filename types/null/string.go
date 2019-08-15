@@ -12,6 +12,7 @@ import (
 //
 // If the String is valid and contains the empty string, it will be considered
 // non-nil, and of zero value.
+// swagger:strfmt optional
 type String struct {
 	sql.NullString
 }
@@ -84,7 +85,7 @@ func (s String) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements the encoding/json Unmarshaler interface. It will
 // decode a given []byte into s, so long as the provided []byte is a valid JSON
-//string or a null.
+// string or a null.
 //
 // An empty string will result in a valid-but-empty String. The keyword 'null'
 // will result in a null String. The string '"null"' is considered to be a
